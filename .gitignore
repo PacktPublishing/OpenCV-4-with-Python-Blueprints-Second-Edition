@@ -63,3 +63,8 @@ docs/_build/
 # PyBuilder
 target/
 *.pkl
+
+
+# Editor
+*.sw[op]
+.idea/
