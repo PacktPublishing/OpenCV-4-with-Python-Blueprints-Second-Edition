@@ -1,3 +1,10 @@
+# Virtual Environment
+.py2.7-cv-blueprints/
+.py3.6-cv-blueprints/
+.py3.7-cv-blueprints/
+.py3.8-cv-blueprints/
+.tmp/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

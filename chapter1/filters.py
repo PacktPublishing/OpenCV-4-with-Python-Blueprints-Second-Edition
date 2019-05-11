@@ -25,13 +25,14 @@ class PencilSketch:
         effect.
     """
 
-    def __init__(self, (width, height), bg_gray='pencilsketch_bg.jpg'):
+    def __init__(self, xxx_todo_changeme, bg_gray='pencilsketch_bg.jpg'):
         """Initialize parameters
 
             :param (width, height): Image size.
             :param bg_gray: Optional background image to improve the illusion
                             that the pencil sketch was drawn on a canvas.
         """
+        (width, height) = xxx_todo_changeme
         self.width = width
         self.height = height
 
@@ -95,7 +96,7 @@ class WarmingFilter:
     def _create_LUT_8UC1(self, x, y):
         """Creates a look-up table using scipy's spline interpolation"""
         spl = UnivariateSpline(x, y)
-        return spl(xrange(256))
+        return spl(range(256))
 
 
 class CoolingFilter:
@@ -135,7 +136,7 @@ class CoolingFilter:
     def _create_LUT_8UC1(self, x, y):
         """Creates a look-up table using scipy's spline interpolation"""
         spl = UnivariateSpline(x, y)
-        return spl(xrange(256))
+        return spl(range(256))
 
 
 class Cartoonizer:
@@ -156,16 +157,16 @@ class Cartoonizer:
         # -- STEP 1 --
         # downsample image using Gaussian pyramid
         img_color = img_rgb
-        for _ in xrange(numDownSamples):
+        for _ in range(numDownSamples):
             img_color = cv2.pyrDown(img_color)
 
         # repeatedly apply small bilateral filter instead of applying
         # one large filter
-        for _ in xrange(numBilateralFilters):
+        for _ in range(numBilateralFilters):
             img_color = cv2.bilateralFilter(img_color, 9, 9, 7)
 
         # upsample image to original size
-        for _ in xrange(numDownSamples):
+        for _ in range(numDownSamples):
             img_color = cv2.pyrUp(img_color)
 
         # make sure resulting image has the same dims as original

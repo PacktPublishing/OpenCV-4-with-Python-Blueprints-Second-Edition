@@ -93,6 +93,22 @@ applications.
 
 
 ## Software Requirements
+
+We are using python3.7 (to be upgraded to 3.8)
+
+```
+make
+source .py3.7-cv-blueprints/bin/activate
+```
+
+## wxPython for demos
+
+- Ubuntu
+```
+sudo apt install libjpeg-dev libtiff-dev libsdl2-dev libgstreamer-plugins-base1.0-dev libnotify-dev freeglut3 freeglut3-dev libsm-dev libsm-dev libwebkit2gtk-4.0-dev libxtst-dev
+```
+
+## OLD Software Requirements
 All projects can run on Windows, Mac, or Linux, and require the following software packages:
 * OpenCV 2.4.9 or later: Recent 32-bit and 64-bit versions as well as installation instructions are available at
 http://opencv.org/downloads.html. Platform-specific installation instructions can be found at
@@ -135,3 +151,4 @@ license according to Wikipedia. GPL allows for commercial use, distribution, mod
 
 The GPL is a copyleft license, which means that derived works can only be distributed under the same license terms.
 For more information, please see the license file.
+
