@@ -20,7 +20,7 @@ def main(video_file='soccer.avi', roi=((140, 100), (500, 600))):
     if path.isfile(video_file):
         video = cv2.VideoCapture(video_file)
     else:
-        print 'File "' + video_file + '" does not exist.'
+        print('File "' + video_file + '" does not exist.')
         raise SystemExit
 
     # initialize tracker

@@ -240,7 +240,8 @@ class SceneReconstruction3D:
     def _extract_keypoints_surf(self):
         """Extracts keypoints via SURF descriptors"""
         # extract keypoints and descriptors from both images
-        detector = cv2.SURF(250)
+        # detector = cv2.BRISK_create(250)
+        detector = cv2.BRISK_create()
         first_key_points, first_desc = detector.detectAndCompute(self.img1,
                                                                  None)
         second_key_points, second_desc = detector.detectAndCompute(self.img2,

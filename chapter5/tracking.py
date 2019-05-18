@@ -127,7 +127,7 @@ class MultipleObjectsTracker:
         """
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        for i in xrange(len(self.object_roi)):
+        for i in range(len(self.object_roi)):
             roi_hist = copy.deepcopy(self.object_roi[i])
             box_old = copy.deepcopy(self.object_box[i])
 
