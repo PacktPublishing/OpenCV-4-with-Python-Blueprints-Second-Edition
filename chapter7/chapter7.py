@@ -25,7 +25,7 @@ import numpy as np
 import time
 import wx
 from os import path
-import cPickle as pickle
+import pickle as pickle
 
 from datasets import homebrew
 from detectors import FaceDetector
@@ -107,12 +107,12 @@ class FaceLayout(BaseLayout):
                 self.MLP = MultiLayerPerceptron(layer_sizes, self.all_labels)
                 self.MLP.load(load_mlp)
             else:
-                print "Warning: Testing is disabled"
-                print "Could not find pre-trained MLP file ", load_mlp
+                print("Warning: Testing is disabled")
+                print("Could not find pre-trained MLP file ", load_mlp)
                 self.testing.Disable()
         else:
-            print "Warning: Testing is disabled"
-            print "Could not find data file ", load_preprocessed_data
+            print("Warning: Testing is disabled")
+            print("Could not find data file ", load_preprocessed_data)
             self.testing.Disable()
 
     def _create_custom_layout(self):
@@ -229,15 +229,15 @@ class FaceLayout(BaseLayout):
             label = 'disgusted'
 
         if self.head is None:
-            print "No face detected"
+            print("No face detected")
         else:
             success, head = self.faces.align_head(self.head)
             if success:
-                print "Added sample to training set"
+                print("Added sample to training set")
                 self.samples.append(head.flatten())
                 self.labels.append(label)
             else:
-                print "Could not align head (eye detection failed?)"
+                print("Could not align head (eye detection failed?)")
 
     def _on_exit(self, evt):
         """Dumps the training data to file upon exiting"""
@@ -263,7 +263,7 @@ class FaceLayout(BaseLayout):
             f.close()
 
             # inform user that file was created
-            print "Saved", len(self.samples), "samples to", self.data_file
+            print("Saved", len(self.samples), "samples to", self.data_file)
 
         # deallocate
         self.Destroy()
@@ -273,13 +273,8 @@ def main():
     capture = cv2.VideoCapture(0)
     if not(capture.isOpened()):
         capture.open()
-
-    if hasattr(cv2, 'cv'):
-        capture.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 640)
-        capture.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, 480)
-    else:
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     # start graphical user interface
     app = wx.App()

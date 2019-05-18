@@ -23,7 +23,7 @@ def main():
         save_to_file="datasets/faces_preprocessed.pkl",
         seed=42)
     if len(X_train) == 0 or len(X_test) == 0:
-        print "Empty data"
+        print("Empty data")
         raise SystemExit
 
     # convert to numpy
@@ -44,20 +44,20 @@ def main():
     saveFile = 'params/mlp.xml'
 
     # find best MLP configuration
-    print "---"
-    print "1-hidden layer networks"
+    print("---")
+    print("1-hidden layer networks")
     best_acc = 0.0  # keep track of best accuracy
-    for l1 in xrange(10):
+    for l1 in range(10):
         # gradually increase the hidden-layer size
         layerSizes = np.int32([num_features, (l1 + 1) * num_features/5,
                                num_classes])
         MLP = MultiLayerPerceptron(layerSizes, labels)
-        print layerSizes
+        print(layerSizes)
         MLP.fit(X_train, y_train, params=params)
         (acc, _, _) = MLP.evaluate(X_train, y_train)
-        print " - train acc = ", acc
+        print(" - train acc = ", acc)
         (acc, _, _) = MLP.evaluate(X_test, y_test)
-        print " - test acc = ", acc
+        print(" - test acc = ", acc)
         if acc > best_acc:
             # save best MLP configuration to file
             MLP.save(saveFile)

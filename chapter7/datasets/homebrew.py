@@ -18,7 +18,7 @@ from matplotlib import cm
 from matplotlib import pyplot as plt
 
 from os import path
-import cPickle as pickle
+import pickle as pickle
 
 __author__ = "Michael Beyeler"
 __license__ = "GNU GPL 3.0 or later"
@@ -45,21 +45,21 @@ def load_data(load_from_file, test_split=0.2, num_components=50,
     X = []
     labels = []
     if not path.isfile(load_from_file):
-        print "Could not find file", load_from_file
+        print("Could not find file", load_from_file)
         return (X, labels), (X, labels), None, None
     else:
-        print "Loading data from", load_from_file
+        print("Loading data from", load_from_file)
         f = open(load_from_file, 'rb')
         samples = pickle.load(f)
         labels = pickle.load(f)
-        print "Loaded", len(samples), "training samples"
+        print("Loaded", len(samples), "training samples")
 
         # perform feature extraction
         # returns preprocessed samples, PCA basis vectors & mean
         X, V, m = extract_features(samples, num_components=num_components)
 
         if plot_samples:
-            print "Plotting samples not implemented"
+            print("Plotting samples not implemented")
 
     # shuffle dataset
     np.random.seed(seed)
@@ -84,7 +84,7 @@ def load_data(load_from_file, test_split=0.2, num_components=50,
         pickle.dump(V, f)
         pickle.dump(m, f)
         f.close()
-        print "Save preprocessed data to", save_to_file
+        print("Save preprocessed data to", save_to_file)
 
     return (X_train, y_train), (X_test, y_test), V, m
 
@@ -142,7 +142,7 @@ def extract_features(X, V=None, m=None, num_components=None):
         V = V[:num_components]
 
     # backproject
-    for i in xrange(len(X)):
+    for i in range(len(X)):
         X[i] = np.dot(V, X[i] - m[0, i])
 
     return X, V, m

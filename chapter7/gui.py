@@ -19,7 +19,7 @@ class Meta1(wx.Frame):
     pass
 
 
-class BaseLayout(Meta1):
+class BaseLayout(Meta1, metaclass=makecls()):
     """Abstract base class for all layouts
 
         A custom layout needs to implement at least three methods:
@@ -41,7 +41,6 @@ class BaseLayout(Meta1):
                                  frame. It needs to return the processed RGB
                                  frame to be displayed.
     """
-    __metaclass__ = makecls()
 
     def __init__(self, capture, title=None, parent=None, id=-1, fps=10):
         """Class constructor
@@ -65,7 +64,7 @@ class BaseLayout(Meta1):
         # determine window size and init wx.Frame
         success, frame = self._acquire_frame()
         if not success:
-            print "Could not acquire frame from camera."
+            print("Could not acquire frame from camera.")
             raise SystemExit
 
         self.imgHeight, self.imgWidth = frame.shape[:2]
