@@ -28,28 +28,28 @@ class FeatureMatching:
     """
 
     def __init__(self, train_image="salinger.jpg"):
-        """Constructor
+        """
+        Initialize the SURF descriptor, FLANN matcher, and the tracking
+        algorithm.
 
-            This method initializes the SURF descriptor, FLANN matcher, and the
-            tracking algorithm.
-
-            :param train_image: training or template image showing the object
-                                of interest
+        :param train_image: training or template image showing the object
+        of interest
         """
         # initialize SURF
-        self.min_hessian = 400
-        self.SURF = cv2.SURF(self.min_hessian)
+        # self.SURF = cv2.xfeatures2d.SURF_create(self.min_hessian)
+        # self.f_extractor = cv2.xfeatures2d.BRISK_create()
+        self.f_extractor = cv2.BRISK_create()
 
         # template image: "train" image
         # later on compared ot each video frame: "query" image
         self.img_obj = cv2.imread(train_image, cv2.CV_8UC1)
         if self.img_obj is None:
-            print "Could not find train image " + train_image
+            print("Could not find train image " + train_image)
             raise SystemExit
 
         self.sh_train = self.img_obj.shape[:2]
         self.key_train, self.desc_train = \
-            self.SURF.detectAndCompute(self.img_obj, None)
+            self.f_extractor.detectAndCompute(self.img_obj, None)
 
         # initialize FLANN
         FLANN_INDEX_KDTREE = 0
@@ -107,16 +107,15 @@ class FeatureMatching:
 
         # early outlier detection and rejection
         # if any corners lie significantly outside the image, skip frame
-        if np.any(filter(lambda x: x[0] < -20 or x[1] < -20 or
-                         x[0] > sh_query[1]+20 or x[1] > sh_query[0] + 20,
-                         dst_corners)):
+        if np.any([x for x in dst_corners if x[0] < -20 or x[1] < -20 or
+                         x[0] > sh_query[1]+20 or x[1] > sh_query[0] + 20]):
             self.num_frames_no_success = self.num_frames_no_success + 1
             return False, frame
 
         # early outlier detection and rejection
         # find the area of the quadrilateral that the four corner points spans
         area = 0
-        for i in xrange(0, 4):
+        for i in range(0, 4):
             next_i = (i + 1) % 4
             area = area + (dst_corners[i][0]*dst_corners[next_i][1] -
                            dst_corners[i][1]*dst_corners[next_i][0])/2.
@@ -131,12 +130,12 @@ class FeatureMatching:
         # next to the train image (add self.sh_train[1])
         dst_corners = [(np.int(dst_corners[i][0] + self.sh_train[1]),
                        np.int(dst_corners[i][1]))
-                       for i in xrange(len(dst_corners))]
+                       for i in range(len(dst_corners))]
 
         # outline corner points of train image in query image
         img_flann = draw_good_matches(self.img_obj, self.key_train, img_query,
                                       key_query, good_matches)
-        for i in xrange(0, len(dst_corners)):
+        for i in range(0, len(dst_corners)):
             cv2.line(img_flann, dst_corners[i], dst_corners[(i + 1) % 4],
                      (0, 255, 0), 3)
 
@@ -168,7 +167,7 @@ class FeatureMatching:
             :param frame: the input image
             :returns: (keypoints, descriptor)
         """
-        return self.SURF.detectAndCompute(frame, None)
+        return self.f_extractor.detectAndCompute(frame, None)
 
     def _match_features(self, desc_frame):
         """Feature matching between train and query image
@@ -186,9 +185,8 @@ class FeatureMatching:
         matches = self.flann.knnMatch(self.desc_train, desc_frame, k=2)
 
         # discard bad matches, ratio test as per Lowe's paper
-        good_matches = filter(lambda x: x[0].distance < 0.7*x[1].distance,
-                              matches)
-        good_matches = [good_matches[i][0] for i in xrange(len(good_matches))]
+        good_matches = [x for x in matches if x[0].distance < 0.7*x[1].distance]
+        good_matches = [good_matches[i][0] for i in range(len(good_matches))]
 
         return good_matches
 
@@ -205,9 +203,9 @@ class FeatureMatching:
         """
         # find homography using RANSAC
         src_points = [self.key_train[good_matches[i].queryIdx].pt
-                      for i in xrange(len(good_matches))]
+                      for i in range(len(good_matches))]
         dst_points = [key_frame[good_matches[i].trainIdx].pt
-                      for i in xrange(len(good_matches))]
+                      for i in range(len(good_matches))]
         H, _ = cv2.findHomography(np.array(src_points), np.array(dst_points),
                                   cv2.RANSAC)
 
@@ -218,7 +216,7 @@ class FeatureMatching:
         dst_corners = cv2.perspectiveTransform(src_corners[None, :, :], H)
 
         # convert to tuple
-        dst_corners = map(tuple, dst_corners[0])
+        dst_corners = list(map(tuple, dst_corners[0]))
         return dst_corners
 
     def _warp_keypoints(self, good_matches, key_frame, sh_frame):
@@ -242,12 +240,12 @@ class FeatureMatching:
 
         # source points are the ones in the train image
         src_points = [key_frame[good_matches[i].trainIdx].pt
-                      for i in xrange(len(good_matches))]
+                      for i in range(len(good_matches))]
 
         # destination points are the ones in the query image
         # off-set in space so that the image is centered
         dst_points = [self.key_train[good_matches[i].queryIdx].pt
-                      for i in xrange(len(good_matches))]
+                      for i in range(len(good_matches))]
         dst_points = [[x*scale_row+bias_row, y*scale_col+bias_col]
                       for x, y in dst_points]
 
