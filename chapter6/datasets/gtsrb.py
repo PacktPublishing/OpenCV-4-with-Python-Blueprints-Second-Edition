@@ -46,7 +46,7 @@ def load_data(rootpath="datasets/gtsrb_training", feature=None, cut_roi=True,
     # read all training samples and corresponding class labels
     X = []  # data
     labels = []  # corresponding labels
-    for c in xrange(len(classes)):
+    for c in range(len(classes)):
         # subdirectory for class
         prefix = rootpath + '/' + format(classes[c], '05d') + '/'
 
@@ -55,7 +55,7 @@ def load_data(rootpath="datasets/gtsrb_training", feature=None, cut_roi=True,
 
         # csv parser for annotations file
         gt_reader = csv.reader(gt_file, delimiter=';')
-        gt_reader.next()  # skip header
+        next(gt_reader)  # skip header
 
         # loop over all images in current annotations file
         for row in gt_reader:
@@ -83,8 +83,8 @@ def load_data(rootpath="datasets/gtsrb_training", feature=None, cut_roi=True,
         num_samples = 15
         sample_idx = np.random.randint(len(X), size=num_samples)
         sp = 1
-        for r in xrange(3):
-            for c in xrange(5):
+        for r in range(3):
+            for c in range(5):
                 ax = plt.subplot(3, 5, sp)
                 sample = X[sample_idx[sp - 1]]
                 ax.imshow(sample.reshape((32, 32)), cmap=cm.Greys_r)

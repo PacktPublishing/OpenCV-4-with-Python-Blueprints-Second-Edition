@@ -26,8 +26,8 @@ def main():
     precision = np.zeros((2, len(features)))
     recall = np.zeros((2, len(features)))
 
-    for f in xrange(len(features)):
-        print "feature", features[f]
+    for f in range(len(features)):
+        print("feature", features[f])
         (X_train, y_train), (X_test, y_test) = gtsrb.load_data(
             "datasets/gtsrb_training",
             feature=features[f],
@@ -43,28 +43,28 @@ def main():
         # find all class labels
         labels = np.unique(np.hstack((y_train, y_test)))
 
-        for s in xrange(len(strategies)):
-            print " - strategy", strategies[s]
+        for s in range(len(strategies)):
+            print(" - strategy", strategies[s])
             # set up SVMs
             MCS = MultiClassSVM(len(labels), strategies[s])
 
             # training phase
-            print "    - train"
+            print("    - train")
             MCS.fit(X_train, y_train)
 
             # test phase
-            print "    - test"
+            print("    - test")
             acc, prec, rec = MCS.evaluate(X_test, y_test)
             accuracy[s, f] = acc
             precision[s, f] = np.mean(prec)
             recall[s, f] = np.mean(rec)
-            print "       - accuracy: ", acc
-            print "       - mean precision: ", np.mean(prec)
-            print "       - mean recall: ", np.mean(rec)
+            print("       - accuracy: ", acc)
+            print("       - mean precision: ", np.mean(prec))
+            print("       - mean recall: ", np.mean(rec))
 
     # plot results as stacked bar plot
     f, ax = plt.subplots(2)
-    for s in xrange(len(strategies)):
+    for s in range(len(strategies)):
         x = np.arange(len(features))
         ax[s].bar(x - 0.2, accuracy[s, :], width=0.2, color='b',
                   hatch='/', align='center')

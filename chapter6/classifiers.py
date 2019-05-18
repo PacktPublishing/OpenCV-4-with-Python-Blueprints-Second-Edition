@@ -13,7 +13,7 @@ __author__ = "Michael Beyeler"
 __license__ = "GNU GPL 3.0 or later"
 
 
-class Classifier:
+class Classifier(metaclass=ABCMeta):
     """
         Abstract base class for all classifiers
 
@@ -23,7 +23,7 @@ class Classifier:
         - evaluate:  A method to test the classifier by predicting labels of
                      some test data based on the trained model.
 
-        A classifier also needs to specify a classification strategy via 
+        A classifier also needs to specify a classification strategy via
         setting self.mode to either "one-vs-all" or "one-vs-one".
         The one-vs-all strategy involves training a single classifier per
         class, with the samples of that class as positive samples and all
@@ -35,7 +35,6 @@ class Classifier:
         This class also provides method to calculate accuracy, precision,
         recall, and the confusion matrix.
     """
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def fit(self, X_train, y_train):
@@ -82,7 +81,7 @@ class Classifier:
 
             # consider each class separately
             prec = np.zeros(self.num_classes)
-            for c in xrange(self.num_classes):
+            for c in range(self.num_classes):
                 # true positives: label is c, classifier predicted c
                 tp = conf[c, c]
 
@@ -94,7 +93,7 @@ class Classifier:
         elif self.mode == "one-vs-all":
             # consider each class separately
             prec = np.zeros(self.num_classes)
-            for c in xrange(self.num_classes):
+            for c in range(self.num_classes):
                 # true positives: label is c, classifier predicted c
                 tp = np.count_nonzero((y_test == c) * (y_hat == c))
 
@@ -123,7 +122,7 @@ class Classifier:
 
             # consider each class separately
             recall = np.zeros(self.num_classes)
-            for c in xrange(self.num_classes):
+            for c in range(self.num_classes):
                 # true positives: label is c, classifier predicted c
                 tp = conf[c, c]
 
@@ -134,7 +133,7 @@ class Classifier:
         elif self.mode == "one-vs-all":
             # consider each class separately
             recall = np.zeros(self.num_classes)
-            for c in xrange(self.num_classes):
+            for c in range(self.num_classes):
                 # true positives: label is c, classifier predicted c
                 tp = np.count_nonzero((y_test == c) * (y_hat == c))
 
@@ -160,10 +159,10 @@ class Classifier:
         """
         y_hat = np.argmax(Y_vote, axis=1)
         conf = np.zeros((self.num_classes, self.num_classes)).astype(np.int32)
-        for c_true in xrange(self.num_classes):
+        for c_true in range(self.num_classes):
             # looking at all samples of a given class, c_true
             # how many were classified as c_true? how many as others?
-            for c_pred in xrange(self.num_classes):
+            for c_pred in range(self.num_classes):
                 y_this = np.where((y_test == c_true) * (y_hat == c_pred))
                 conf[c_pred, c_true] = np.count_nonzero(y_this)
         return conf
@@ -218,14 +217,14 @@ class MultiClassSVM(Classifier):
         self.classifiers = []
         if mode == "one-vs-one":
             # k classes: need k*(k-1)/2 classifiers
-            for _ in xrange(num_classes*(num_classes - 1) / 2):
-                self.classifiers.append(cv2.SVM())
+            for _ in range(num_classes*(num_classes - 1) // 2):
+                self.classifiers.append(cv2.ml.SVM_create())
         elif mode == "one-vs-all":
             # k classes: need k classifiers
-            for _ in xrange(num_classes):
-                self.classifiers.append(cv2.SVM())
+            for _ in range(num_classes):
+                self.classifiers.append(cv2.ml.SVM_create())
         else:
-            print "Unknown mode ", mode
+            print("Unknown mode ", mode)
 
     def fit(self, X_train, y_train, params=None):
         """Fits the model to training data
@@ -244,21 +243,21 @@ class MultiClassSVM(Classifier):
 
         if self.mode == "one-vs-one":
             svm_id = 0
-            for c1 in xrange(self.num_classes):
-                for c2 in xrange(c1 + 1, self.num_classes):
+            for c1 in range(self.num_classes):
+                for c2 in range(c1 + 1, self.num_classes):
                     # indices where class labels are either `c1` or `c2`
                     data_id = np.where((y_train == c1) + (y_train == c2))[0]
 
                     # set class label to 1 where class is `c1`, else 0
-                    y_train_bin = np.where(y_train[data_id] == c1, 1, 
+                    y_train_bin = np.where(y_train[data_id] == c1, 1,
                                            0).flatten()
-
+                    fp = X_train[data_id, :]
                     self.classifiers[svm_id].train(X_train[data_id, :],
                                                    y_train_bin,
                                                    params=self.params)
                     svm_id += 1
         elif self.mode == "one-vs-all":
-            for c in xrange(self.num_classes):
+            for c in range(self.num_classes):
                 # train c-th SVM on class c vs. all other classes
                 # set class label to 1 where class==c, else 0
                 y_train_bin = np.where(y_train == c, 1, 0).flatten()
@@ -285,8 +284,8 @@ class MultiClassSVM(Classifier):
 
         if self.mode == "one-vs-one":
             svm_id = 0
-            for c1 in xrange(self.num_classes):
-                for c2 in xrange(c1 + 1, self.num_classes):
+            for c1 in range(self.num_classes):
+                for c2 in range(c1 + 1, self.num_classes):
                     data_id = np.where((y_test == c1) + (y_test == c2))[0]
                     X_test_id = X_test[data_id, :]
                     y_test_id = y_test[data_id]
@@ -297,13 +296,13 @@ class MultiClassSVM(Classifier):
                     # predict labels
                     y_hat = self.classifiers[svm_id].predict_all(X_test_id)
 
-                    for i in xrange(len(y_hat)):
+                    for i in range(len(y_hat)):
                         if y_hat[i] == 1:
                             Y_vote[data_id[i], c1] += 1
                         elif y_hat[i] == 0:
                             Y_vote[data_id[i], c2] += 1
                         else:
-                            print "y_hat[", i, "] = ", y_hat[i]
+                            print("y_hat[", i, "] = ", y_hat[i])
 
                     # we vote for c1 where y_hat is 1, and for c2 where y_hat
                     # is 0 np.where serves as the inner index into the data_id
@@ -313,7 +312,7 @@ class MultiClassSVM(Classifier):
                     # Y_vote[data_id[np.where(y_hat == 0)[0]], c2] += 1
                     svm_id += 1
         elif self.mode == "one-vs-all":
-            for c in xrange(self.num_classes):
+            for c in range(self.num_classes):
                 # set class label to 1 where class==c, else 0
                 # predict class labels
                 # y_test_bin = np.where(y_test==c,1,0).reshape(-1,1)
