@@ -15,7 +15,7 @@
 import wx
 import cv2
 
-from gui import BaseLayout
+from wx_gui import BaseLayout
 from tools import apply_hue_filter
 from tools import apply_rgb_filters
 from tools import load_img_resized
