@@ -12,7 +12,7 @@
 import cv2
 import wx
 
-from gui import BaseLayout
+from wx_gui import BaseLayout
 from feature_matching import FeatureMatching
 
 

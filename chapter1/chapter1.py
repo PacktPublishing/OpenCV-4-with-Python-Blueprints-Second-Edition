@@ -12,35 +12,43 @@
     * Cartoonizer
 """
 
-import numpy as np
-
 import wx
 import cv2
 
-from gui import BaseLayout
-from filters import PencilSketch, WarmingFilter, CoolingFilter, Cartoonizer
+from wx_gui import BaseLayout
+from tools import apply_hue_filter
+from tools import apply_rgb_filters
+from tools import load_img_resized
+from tools import spline_to_lookup_table
+from tools import cartoonize
+from tools import convert_to_pencil_sketch
 
-__author__ = "Michael Beyeler"
+
 __license__ = "GNU GPL 3.0 or later"
 
 
 class FilterLayout(BaseLayout):
-    """Custom layout for filter effects
-
-        This class implements a custom layout for applying diverse filter
-        effects to a camera feed. The layout is based on an abstract base
-        class BaseLayout. It displays the camera feed (passed to the class as
-        a cv2.VideoCapture object) in the variable self.panels_vertical.
-        Additional layout elements can be added by using the Add method (e.g.,
-        self.panels_vertical(wx.Panel(self, -1))).
     """
+    Custom layout for filter effects
 
-    def _init_custom_layout(self):
-        """Initializes image filter effects"""
-        self.pencil_sketch = PencilSketch((self.imgWidth, self.imgHeight))
-        self.warm_filter = WarmingFilter()
-        self.cool_filter = CoolingFilter()
-        self.cartoonizer = Cartoonizer()
+    This class implements a custom layout for applying diverse filter
+    effects to a camera feed. The layout is based on an abstract base
+    class BaseLayout. It displays the camera feed (passed to the class as
+    a cv2.VideoCapture object) in the variable self.panels_vertical.
+    Additional layout elements can be added by using the Add method (e.g.,
+    self.panels_vertical(wx.Panel(self, -1))).
+    """
+    INCREASE_LOOKUP_TABLE = spline_to_lookup_table([0, 64, 128, 192, 256],
+                                                   [0, 70, 140, 210, 256])
+    DECREASE_LOOKUP_TABLE = spline_to_lookup_table([0, 64, 128, 192, 256],
+                                                   [0, 30, 80, 120, 192])
+
+    # def _init_custom_layout(self):
+    #     """Initializes image filter effects"""
+    #     self.pencil_sketch = PencilSketch((self.imgWidth, self.imgHeight))
+    #     self.warm_filter = WarmingFilter()
+    #     self.cool_filter = CoolingFilter()
+    #     self.cartoonizer = Cartoonizer()
 
     def _create_custom_layout(self):
         """Layout showing a row of radio buttons below the camera feed"""
@@ -64,6 +72,29 @@ class FilterLayout(BaseLayout):
         self.panels_vertical.Add(pnl, flag=wx.EXPAND | wx.BOTTOM | wx.TOP,
                                  border=1)
 
+    def render_warm(self, rgb_frame):
+        interim_img = apply_rgb_filters(rgb_frame,
+                                        red_filter=self.INCREASE_LOOKUP_TABLE,
+                                        blue_filter=self.DECREASE_LOOKUP_TABLE)
+        return apply_hue_filter(interim_img, self.INCREASE_LOOKUP_TABLE)
+
+    def render_cool(self, rgb_frame):
+        interim_img = apply_rgb_filters(rgb_frame,
+                                        red_filter=self.DECREASE_LOOKUP_TABLE,
+                                        blue_filter=self.INCREASE_LOOKUP_TABLE)
+        return apply_hue_filter(interim_img, self.DECREASE_LOOKUP_TABLE)
+
+    def render_pencil_sketch(self, rgb_frame):
+        sketch = convert_to_pencil_sketch(rgb_frame)
+
+        canvas = load_img_resized('pencilsketch_bg.jpg',
+                                  (self.imgWidth, self.imgHeight))
+        if canvas is not None:
+            sketch = cv2.multiply(sketch, canvas, scale=1. / 256)
+
+        # Convert back to RGB for rendering.
+        return cv2.cvtColor(sketch, cv2.COLOR_GRAY2RGB)
+
     def _process_frame(self, frame_rgb):
         """Processes the current RGB camera frame
 
@@ -71,14 +102,13 @@ class FilterLayout(BaseLayout):
         """
         # choose filter effect based on radio buttons setting
         if self.mode_warm.GetValue():
-            frame = self.warm_filter.render(frame_rgb)
+            frame = self.render_warm(frame_rgb)
         elif self.mode_cool.GetValue():
-            frame = self.cool_filter.render(frame_rgb)
+            frame = self.render_cool(frame_rgb)
         elif self.mode_sketch.GetValue():
-            frame = self.pencil_sketch.render(frame_rgb)
+            frame = self.render_pencil_sketch(frame_rgb)
         elif self.mode_cartoon.GetValue():
-            frame = self.cartoonizer.render(frame_rgb)
-
+            frame = cartoonize(frame_rgb)
         return frame
 
 
