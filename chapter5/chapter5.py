@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 from os import path
 
-from saliency import Saliency
+from saliency import get_saliency_map, get_proto_objects_map
 from tracking import MultipleObjectsTracker
 
 
@@ -35,13 +35,12 @@ def main(video_file='soccer.avi', roi=((140, 100), (500, 600))):
                 img = img[roi[0][0]:roi[1][0], roi[0][1]:roi[1][1]]
 
             # generate saliency map
-            sal = Saliency(img, use_numpy_fft=False, gauss_kernel=(3, 3))
-
+            saliency = get_saliency_map(img, use_numpy_fft=False, gauss_kernel=(3, 3))
+            objects =  get_proto_objects_map(saliency, use_otsu=False)
             cv2.imshow('original', img)
-            cv2.imshow('saliency', sal.get_saliency_map())
-            cv2.imshow('objects', sal.get_proto_objects_map(use_otsu=False))
-            cv2.imshow('tracker', mot.advance_frame(img,
-                       sal.get_proto_objects_map(use_otsu=False)))
+            cv2.imshow('saliency', saliency)
+            cv2.imshow('objects', objects)
+            cv2.imshow('tracker', mot.advance_frame(img,objects))
 
             if cv2.waitKey(100) & 0xFF == ord('q'):
                 break
