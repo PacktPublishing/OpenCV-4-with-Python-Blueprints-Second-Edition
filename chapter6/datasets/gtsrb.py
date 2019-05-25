@@ -148,8 +148,9 @@ def _extract_feature(X, feature):
         block_stride = (small_size[0] / 4, small_size[1] / 4)
         cell_size = block_stride
         num_bins = 9
-        hog = cv2.HOGDescriptor(small_size, block_size, block_stride,
-                                cell_size, num_bins)
+        hog = cv2.HOGDescriptor()
+        # hog = cv2.HOGDescriptor(small_size, block_size, block_stride,
+        #                         cell_size, num_bins)
         X = [hog.compute(x) for x in X]
     elif feature is not None:
         # normalize all intensities to be between 0 and 1

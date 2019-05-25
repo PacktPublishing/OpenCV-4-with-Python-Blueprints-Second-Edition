@@ -6,14 +6,16 @@
 import cv2
 import numpy as np
 
+import abc
 from abc import ABCMeta, abstractmethod
 from matplotlib import pyplot as plt
+from tqdm import tqdm
 
 __author__ = "Michael Beyeler"
 __license__ = "GNU GPL 3.0 or later"
 
 
-class Classifier(metaclass=ABCMeta):
+class Classifier(abc.ABC):
     """
         Abstract base class for all classifiers
 
@@ -44,7 +46,8 @@ class Classifier(metaclass=ABCMeta):
     def evaluate(self, X_test, y_test, visualize=False):
         pass
 
-    def _accuracy(self, y_test, Y_vote):
+    @staticmethod
+    def _accuracy(y_test, Y_vote):
         """Calculates accuracy
 
             This method calculates the accuracy based on a vector of
@@ -168,6 +171,43 @@ class Classifier(metaclass=ABCMeta):
         return conf
 
 
+class OneVsAllMultiSVM:
+    """
+        * one-vs-all: A single classifier is trained per class, with the
+                      samples of that class as positives (label 1) and all
+                      others as negatives (label 0).
+
+        Each classifier then votes for a particular class label, and the final
+        decision (classification) is based on a majority vote.
+    """
+
+    # def __init__(self, num_classes):
+    #     self.num_classes = num_classes
+    #     self.params = params
+
+    #     # initialize correct number of classifiers
+    #     self.classifiers = [cv2.ml.SVM_create() for _ in range(num_classes)]
+
+    def train(self, X_train, y_train, params={}):
+        num_classes = len(np.unique(y_train))
+        self.classifiers = [cv2.ml.SVM_create() for _ in range(num_classes)]
+
+        for i, clf in enumerate(self.classifiers):
+            # train c-th SVM on class c vs. all other classes
+            # set class label to 1 where class==c, else 0
+            y_train_bin = np.where(y_train == i, 1, 0).astype(int)[..., None]
+            print(y_train_bin.dtype)
+            print(y_train_bin.shape, y_train_bin)
+
+            # train SVM
+            clf.train(X_train, y_train_bin, params=params)
+
+    def predict_all(self, X_test):
+        y_hat = [clf.predict_all(X_test) for clf in self.classifiers]
+        print(y_hat)
+        return y_hat
+
+
 class MultiClassSVM(Classifier):
     """
         Multi-class classification using Support Vector Machines (SVMs)
@@ -254,7 +294,7 @@ class MultiClassSVM(Classifier):
                     fp = X_train[data_id, :]
                     self.classifiers[svm_id].train(X_train[data_id, :],
                                                    y_train_bin,
-                                                   params=self.params)
+                                                    params=self.params)
                     svm_id += 1
         elif self.mode == "one-vs-all":
             for c in range(self.num_classes):
