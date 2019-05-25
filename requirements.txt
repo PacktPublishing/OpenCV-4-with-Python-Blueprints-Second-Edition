@@ -5,3 +5,5 @@ scipy==1.2.1
 matplotlib==3.0.3
 wxPython==4.0.4
 # pyFreenet3 , not sure for what is this for yet
+flake8==3.7.7
+autopep8==1.4.4

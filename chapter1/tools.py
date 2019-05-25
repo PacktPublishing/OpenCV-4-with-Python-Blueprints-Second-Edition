@@ -54,8 +54,8 @@ def cartoonize(rgb_image, *,
     # FIXME: Is this necessary? If so add a comment why.
     # make sure resulting image has the same dims as original
     if filtered_normal_img.shape != rgb_image.shape:
-        filtered_normal_img = cv2.resize(filtered_normal_img, rgb_image.shape[:2])
-
+        filtered_normal_img = cv2.resize(
+            filtered_normal_img, rgb_image.shape[:2])
 
     # -- STEPS 2 and 3 --
     # convert to grayscale and apply median blur
@@ -77,5 +77,3 @@ def convert_to_pencil_sketch(rgb_image):
     gray_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2GRAY)
     blurred_image = cv2.GaussianBlur(gray_image, (21, 21), 0, 0)
     return cv2.divide(gray_image, blurred_image, scale=256)
-
-
