@@ -12,17 +12,20 @@
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+from typing import Tuple
 
 
-def _get_channel_sal_magn(channel: np.ndarray, use_numpy_fft=True) -> np.ndarray:
-    """Returns the log-magnitude of the Fourier spfrom typing import ectrum
+def _get_channel_sal_magn(channel: np.ndarray,
+                          use_numpy_fft=True) -> np.ndarray:
+    """
+    Returns the log-magnitude of the Fourier spfrom typing import ectrum
 
-        This function calculates the log-magnitude of the Fourier spectrum
-        of a single-channel image. This image could be a regular grayscale
-        image, or a single color channel of an RGB image.
+    This function calculates the log-magnitude of the Fourier spectrum
+    of a single-channel image. This image could be a regular grayscale
+    image, or a single color channel of an RGB image.
 
-        :param channel: single-channel input image
-        :returns: log-magnitude of Fourier spectrum
+    :param channel: single-channel input image
+    :returns: log-magnitude of Fourier spectrum
     """
     # do FFT and get log-spectrum
     if use_numpy_fft:
@@ -59,13 +62,18 @@ def _get_channel_sal_magn(channel: np.ndarray, use_numpy_fft=True) -> np.ndarray
 
     return magnitude
 
-def get_saliency_map(frame: np.ndarray, small_shape=(64, 64),gauss_kernel=(5, 5),use_numpy_fft=True) -> np.ndarray:
-    """Returns a saliency map
 
-        This function generates a saliency map for the image that was
-        passed to the class constructor.
+def get_saliency_map(frame: np.ndarray,
+                     small_shape: Tuple[int] = (64, 64),
+                     gauss_kernel: Tuple[int] = (5, 5),
+                     use_numpy_fft: bool = True) -> np.ndarray:
+    """
+    Returns a saliency map
 
-        :returns: grayscale saliency map
+    This function generates a saliency map for the image that was
+    passed to the class constructor.
+
+    :returns: grayscale saliency map
     """
     frame_small = cv2.resize(frame, small_shape)
     num_channels = 1
@@ -87,12 +95,13 @@ def get_saliency_map(frame: np.ndarray, small_shape=(64, 64),gauss_kernel=(5, 5)
         sal = cv2.GaussianBlur(sal, gauss_kernel, sigmaX=8,
                                sigmaY=0)
     sal = sal**2
-    sal = np.float32(sal)/np.max(sal)
+    sal = np.float32(sal) / np.max(sal)
 
     # scale up
     sal = cv2.resize(sal, frame.shape[1::-1])
 
     return sal
+
 
 def get_proto_objects_map(saliency: np.ndarray, use_otsu=True) -> np.ndarray:
     """Returns the proto-objects map of an RGB image
@@ -114,6 +123,7 @@ def get_proto_objects_map(saliency: np.ndarray, use_otsu=True) -> np.ndarray:
         _, img_objects = cv2.threshold(np.uint8(saliency*255), thresh, 255,
                                        cv2.THRESH_BINARY)
     return img_objects
+
 
 def plot_power_spectrum(frame: np.ndarray, use_numpy_fft=True) -> None:
     """Plots the power spectrum

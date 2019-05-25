@@ -8,7 +8,6 @@
 """
 
 import cv2
-import numpy as np
 from os import path
 
 from saliency import get_saliency_map, get_proto_objects_map
@@ -26,25 +25,20 @@ def main(video_file='soccer.avi', roi=((140, 100), (500, 600))):
     # initialize tracker
     mot = MultipleObjectsTracker()
 
-    while True:
-        # grab next frame
-        success, img = video.read()
-        if success:
-            if roi:
-                # original video is too big: grab some meaningful ROI
-                img = img[roi[0][0]:roi[1][0], roi[0][1]:roi[1][1]]
+    for _, img in iter(video.read, (False, None)):
+        if roi:
+            # original video is too big: grab some meaningful ROI
+            img = img[roi[0][0]:roi[1][0], roi[0][1]:roi[1][1]]
 
-            # generate saliency map
-            saliency = get_saliency_map(img, use_numpy_fft=False, gauss_kernel=(3, 3))
-            objects =  get_proto_objects_map(saliency, use_otsu=False)
-            cv2.imshow('original', img)
-            cv2.imshow('saliency', saliency)
-            cv2.imshow('objects', objects)
-            cv2.imshow('tracker', mot.advance_frame(img,objects))
+        # generate saliency map
+        saliency = get_saliency_map(img, use_numpy_fft=False, gauss_kernel=(3, 3))
+        objects = get_proto_objects_map(saliency, use_otsu=False)
+        cv2.imshow('original', img)
+        cv2.imshow('saliency', saliency)
+        cv2.imshow('objects', objects)
+        cv2.imshow('tracker', mot.advance_frame(img, objects))
 
-            if cv2.waitKey(100) & 0xFF == ord('q'):
-                break
-        else:
+        if cv2.waitKey(100) & 0xFF == ord('q'):
             break
 
 
