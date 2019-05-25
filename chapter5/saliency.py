@@ -13,10 +13,11 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-def _get_channel_sal_magn(channel, use_numpy_fft=True):
-    """Returns the log-magnitude of the Fourier spectrum
 
-        This method calculates the log-magnitude of the Fourier spectrum
+def _get_channel_sal_magn(channel: np.ndarray, use_numpy_fft=True) -> np.ndarray:
+    """Returns the log-magnitude of the Fourier spfrom typing import ectrum
+
+        This function calculates the log-magnitude of the Fourier spectrum
         of a single-channel image. This image could be a regular grayscale
         image, or a single color channel of an RGB image.
 
@@ -58,7 +59,7 @@ def _get_channel_sal_magn(channel, use_numpy_fft=True):
 
     return magnitude
 
-def get_saliency_map(frame,small_shape=(64, 64),gauss_kernel=(5, 5),use_numpy_fft=True):
+def get_saliency_map(frame: np.ndarray, small_shape=(64, 64),gauss_kernel=(5, 5),use_numpy_fft=True) -> np.ndarray:
     """Returns a saliency map
 
         This function generates a saliency map for the image that was
@@ -93,7 +94,7 @@ def get_saliency_map(frame,small_shape=(64, 64),gauss_kernel=(5, 5),use_numpy_ff
 
     return sal
 
-def get_proto_objects_map(saliency, use_otsu=True):
+def get_proto_objects_map(saliency: np.ndarray, use_otsu=True) -> np.ndarray:
     """Returns the proto-objects map of an RGB image
 
         This function generates a proto-objects map of an RGB image.
@@ -114,7 +115,7 @@ def get_proto_objects_map(saliency, use_otsu=True):
                                        cv2.THRESH_BINARY)
     return img_objects
 
-def plot_power_spectrum(frame,use_numpy_fft=True):
+def plot_power_spectrum(frame: np.ndarray, use_numpy_fft=True) -> None:
     """Plots the power spectrum
 
         This function plots the power spectrum of the image passed to
