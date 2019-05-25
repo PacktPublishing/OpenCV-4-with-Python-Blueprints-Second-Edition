@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""OpenCV with Python Blueprints
-    Chapter 5: Tracking Visually Salient Objects
+"""
+OpenCV with Python Blueprints
+Chapter 5: Tracking Visually Salient Objects
 
-    An app to track multiple visually salient objects in a video sequence.
+An app to track multiple visually salient objects in a video sequence.
 """
 
 import cv2
@@ -15,12 +16,12 @@ from tracking import MultipleObjectsTracker
 
 
 def main(video_file='soccer.avi', roi=((140, 100), (500, 600))):
-    # open video file
-    if path.isfile(video_file):
-        video = cv2.VideoCapture(video_file)
-    else:
-        print('File "' + video_file + '" does not exist.')
+    if not path.isfile(video_file):
+        print(f'File "{video_file}" does not exist.')
         raise SystemExit
+
+    # open video file
+    video = cv2.VideoCapture(video_file)
 
     # initialize tracker
     mot = MultipleObjectsTracker()
@@ -31,7 +32,8 @@ def main(video_file='soccer.avi', roi=((140, 100), (500, 600))):
             img = img[roi[0][0]:roi[1][0], roi[0][1]:roi[1][1]]
 
         # generate saliency map
-        saliency = get_saliency_map(img, use_numpy_fft=False, gauss_kernel=(3, 3))
+        saliency = get_saliency_map(img, use_numpy_fft=False,
+                                    gauss_kernel=(3, 3))
         objects = get_proto_objects_map(saliency, use_otsu=False)
         cv2.imshow('original', img)
         cv2.imshow('saliency', saliency)
