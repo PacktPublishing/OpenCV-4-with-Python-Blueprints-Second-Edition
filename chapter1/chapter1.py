@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""OpenCV with Python Blueprints
-    Chapter 1: Fun with Filters
+""" OpenCV with Python Blueprints. Chapter 1: Fun with Filters
 
-    An app to apply three different image filter effects to the video stream
-    of a webcam in real-time.
-    The three effects are:
-    * Black-and-white pencil sketch
-    * Warming/cooling filters
-    * Cartoonizer
+An app to apply three different image filter effects to the video stream
+of a webcam in real-time.
+
+The three effects are:
+- Warming/cooling filters
+- Black-and-white pencil sketch
+- Cartoonizer
 """
 
 import wx
