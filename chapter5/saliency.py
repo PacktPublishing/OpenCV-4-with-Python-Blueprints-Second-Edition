@@ -108,15 +108,16 @@ def get_proto_objects_map(saliency: np.ndarray, use_otsu=True) -> np.ndarray:
     :saliency grayscale saliency map
     :returns: proto-objects map
     """
-
+    saliency = np.uint8(saliency * 255)
     if use_otsu:
-        thresh_type = cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        thresh_type = cv2.THRESH_OTSU
+        #  For threshold value, simply pass zero.
         thresh_value = 0
     else:
         thresh_type = cv2.THRESH_BINARY
-        thresh_value = np.mean(saliency) * 255 * 3
+        thresh_value = np.mean(saliency) * 3
 
-    _, img_objects = cv2.threshold(np.uint8(saliency * 255),
+    _, img_objects = cv2.threshold(saliency,
                                    thresh_value, 255, thresh_type)
     return img_objects
 
