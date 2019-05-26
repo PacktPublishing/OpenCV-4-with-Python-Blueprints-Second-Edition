@@ -22,6 +22,7 @@ from tools import load_img_resized
 from tools import spline_to_lookup_table
 from tools import cartoonize
 from tools import convert_to_pencil_sketch
+import numpy as np
 
 
 __license__ = "GNU GPL 3.0 or later"
@@ -43,15 +44,8 @@ class FilterLayout(BaseLayout):
     DECREASE_LOOKUP_TABLE = spline_to_lookup_table([0, 64, 128, 192, 256],
                                                    [0, 30, 80, 120, 192])
 
-    # def _init_custom_layout(self):
-    #     """Initializes image filter effects"""
-    #     self.pencil_sketch = PencilSketch((self.imgWidth, self.imgHeight))
-    #     self.warm_filter = WarmingFilter()
-    #     self.cool_filter = CoolingFilter()
-    #     self.cartoonizer = Cartoonizer()
-
-    def _create_custom_layout(self):
-        """Layout showing a row of radio buttons below the camera feed"""
+    def augment_layout(self):
+        """ Add a row of radio buttons below the camera feed. """
 
         # create a horizontal layout with all filter modes as radio buttons
         pnl = wx.Panel(self, -1)
@@ -72,44 +66,47 @@ class FilterLayout(BaseLayout):
         self.panels_vertical.Add(pnl, flag=wx.EXPAND | wx.BOTTOM | wx.TOP,
                                  border=1)
 
-    def render_warm(self, rgb_frame):
-        interim_img = apply_rgb_filters(rgb_frame,
+    def _render_warm(self, rgb_image: np.ndarray) -> np.ndarray:
+        interim_img = apply_rgb_filters(rgb_image,
                                         red_filter=self.INCREASE_LOOKUP_TABLE,
                                         blue_filter=self.DECREASE_LOOKUP_TABLE)
         return apply_hue_filter(interim_img, self.INCREASE_LOOKUP_TABLE)
 
-    def render_cool(self, rgb_frame):
-        interim_img = apply_rgb_filters(rgb_frame,
+    def _render_cool(self, rgb_image: np.ndarray) -> np.ndarray:
+        interim_img = apply_rgb_filters(rgb_image,
                                         red_filter=self.DECREASE_LOOKUP_TABLE,
                                         blue_filter=self.INCREASE_LOOKUP_TABLE)
         return apply_hue_filter(interim_img, self.DECREASE_LOOKUP_TABLE)
 
-    def render_pencil_sketch(self, rgb_frame):
-        sketch = convert_to_pencil_sketch(rgb_frame)
+    def _render_pencil_sketch(self, rgb_image: np.ndarray) -> np.ndarray:
+        sketch = convert_to_pencil_sketch(rgb_image)
 
         canvas = load_img_resized('pencilsketch_bg.jpg',
                                   (self.imgWidth, self.imgHeight))
         if canvas is not None:
             sketch = cv2.multiply(sketch, canvas, scale=1. / 256)
 
-        # Convert back to RGB for rendering.
         return cv2.cvtColor(sketch, cv2.COLOR_GRAY2RGB)
 
-    def _process_frame(self, frame_rgb):
-        """Processes the current RGB camera frame
+    def process_frame(self, frame_rgb: np.ndarray) -> np.ndarray:
+        """Process the frame of the camera (or other capture device)
 
-            :returns: The processed RGB frame to be displayed
+        Choose a filter effect based on the which of the radio buttons
+        was clicked.
+
+        :param frame_rgb: Image to process in rgb format, of shape (H, W, 3)
+        :return: Processed image in rgb format, of shape (H, W, 3)
         """
-        # choose filter effect based on radio buttons setting
         if self.mode_warm.GetValue():
-            frame = self.render_warm(frame_rgb)
+            return self._render_warm(frame_rgb)
         elif self.mode_cool.GetValue():
-            frame = self.render_cool(frame_rgb)
+            return self._render_cool(frame_rgb)
         elif self.mode_sketch.GetValue():
-            frame = self.render_pencil_sketch(frame_rgb)
+            return self._render_pencil_sketch(frame_rgb)
         elif self.mode_cartoon.GetValue():
-            frame = cartoonize(frame_rgb)
-        return frame
+            return cartoonize(frame_rgb)
+        else:
+            raise NotImplementedError()
 
 
 def main():
