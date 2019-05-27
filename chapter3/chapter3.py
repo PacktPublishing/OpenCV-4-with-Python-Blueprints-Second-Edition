@@ -32,7 +32,7 @@ class FeatureMatchingLayout(BaseLayout):
         """Use plain layout"""
         pass
 
-    def _process_frame(self, frame):
+    def process_frame(self, frame):
         """Processes each captured frame"""
         # if object detected, display new frame, else old one
         success, new_frame = self.matching.match(frame)
