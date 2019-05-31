@@ -17,7 +17,7 @@ from typing import Tuple
 
 
 def _calc_channel_sal_magn(channel: np.ndarray,
-                           use_numpy_fft: bool) -> np.ndarray:
+                           use_numpy_fft: bool = True) -> np.ndarray:
     """
     Calculate the log-magnitude of the Fourier spectrum
     of a single-channel image. This image could be a regular grayscale
@@ -77,7 +77,7 @@ def get_saliency_map(frame: np.ndarray,
     frame_small = cv2.resize(frame, small_shape)
     if len(frame.shape) == 2:
         # single channelsmall_shape[1::-1]
-        sal = _calc_channel_sal_magn(frame, True)
+        sal = _calc_channel_sal_magn(frame, use_numpy_fft)
     else:
         # multiple channels: consider each channel independently
         sal = np.zeros_like(frame_small).astype(np.float32)
@@ -108,15 +108,16 @@ def get_proto_objects_map(saliency: np.ndarray, use_otsu=True) -> np.ndarray:
     :saliency grayscale saliency map
     :returns: proto-objects map
     """
-
+    saliency = np.uint8(saliency * 255)
     if use_otsu:
-        thresh_type = cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        thresh_type = cv2.THRESH_OTSU
+        #  For threshold value, simply pass zero.
         thresh_value = 0
     else:
         thresh_type = cv2.THRESH_BINARY
-        thresh_value = np.mean(saliency) * 255 * 3
+        thresh_value = np.mean(saliency) * 3
 
-    _, img_objects = cv2.threshold(np.uint8(saliency * 255),
+    _, img_objects = cv2.threshold(saliency,
                                    thresh_value, 255, thresh_type)
     return img_objects
 
@@ -145,7 +146,7 @@ def plot_power_spectrum(frame: np.ndarray, use_numpy_fft=True) -> None:
 
     # radial average
     L = max(frame.shape)
-    freqs = np.fft.fftfreq(L)[:L / 2]
+    freqs = np.fft.fftfreq(L)[:L // 2]
     dists = np.sqrt(np.fft.fftfreq(frame.shape[0])[:, np.newaxis]**2 +
                     np.fft.fftfreq(frame.shape[1])**2)
     dcount = np.histogram(dists.ravel(), bins=freqs)[0]
@@ -157,3 +158,36 @@ def plot_power_spectrum(frame: np.ndarray, use_numpy_fft=True) -> None:
     plt.xlabel('frequency')
     plt.ylabel('log-spectrum')
     plt.show()
+
+
+def calc_magnitude_spectrum(img: np.ndarray):
+    """Plot the magnitude spectrum
+        This method calculates the magnitude spectrum of the image passed
+        to the class constructor.
+        :returns: magnitude spectrum
+    """
+    # convert the frame to grayscale if necessary
+    if len(img.shape) > 2:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # expand the image to an optimal size for FFT
+    rows, cols = img.shape
+    nrows = cv2.getOptimalDFTSize(rows)
+    ncols = cv2.getOptimalDFTSize(cols)
+    frame = cv2.copyMakeBorder(img, 0, ncols - cols, 0, nrows - rows,
+                               cv2.BORDER_CONSTANT, value=0)
+
+    # do FFT and get log-spectrum
+    img_dft = np.fft.fft2(img)
+    spectrum = np.log10(np.abs(np.fft.fftshift(img_dft)))
+
+    # return normalized
+    return spectrum / np.max(spectrum)
+
+
+if __name__ == '__main__':
+    video = cv2.VideoCapture('soccer.avi')
+    _, im = video.read()
+    plt.imshow(im)
+    plot_power_spectrum(im)
+    plt.imshow(calc_magnitude_spectrum(cv2.imread("test.jpeg")))
