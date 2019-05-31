@@ -49,7 +49,7 @@ class BaseLayout(wx.Frame):
         self.imgHeight, self.imgWidth = frame.shape[:2]
 
         super().__init__(parent, window_id, title,
-                         size=(self.imgWidth, self.imgHeight))
+                         size=(self.imgWidth, self.imgHeight + 20))
         self.fps = fps
         self.bmp = wx.Bitmap.FromBuffer(self.imgWidth, self.imgHeight, frame)
 

@@ -14,6 +14,7 @@ The three effects are:
 
 import wx
 import cv2
+import numpy as np
 
 from wx_gui import BaseLayout
 from tools import apply_hue_filter
@@ -21,11 +22,16 @@ from tools import apply_rgb_filters
 from tools import load_img_resized
 from tools import spline_to_lookup_table
 from tools import cartoonize
-from tools import convert_to_pencil_sketch
-import numpy as np
+from tools import pencil_sketch_on_canvas
 
 
 __license__ = "GNU GPL 3.0 or later"
+
+
+INCREASE_LOOKUP_TABLE = spline_to_lookup_table([0, 64, 128, 192, 256],
+                                               [0, 70, 140, 210, 256])
+DECREASE_LOOKUP_TABLE = spline_to_lookup_table([0, 64, 128, 192, 256],
+                                               [0, 30, 80, 120, 192])
 
 
 class FilterLayout(BaseLayout):
@@ -39,10 +45,12 @@ class FilterLayout(BaseLayout):
     Additional layout elements can be added by using the Add method (e.g.,
     self.panels_vertical(wx.Panel(self, -1))).
     """
-    INCREASE_LOOKUP_TABLE = spline_to_lookup_table([0, 64, 128, 192, 256],
-                                                   [0, 70, 140, 210, 256])
-    DECREASE_LOOKUP_TABLE = spline_to_lookup_table([0, 64, 128, 192, 256],
-                                                   [0, 30, 80, 120, 192])
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        color_canvas = load_img_resized('pencilsketch_bg.jpg',
+                                        (self.imgWidth, self.imgHeight))
+        self.canvas = cv2.cvtColor(color_canvas, cv2.COLOR_RGB2GRAY)
 
     def augment_layout(self):
         """ Add a row of radio buttons below the camera feed. """
@@ -66,27 +74,19 @@ class FilterLayout(BaseLayout):
         self.panels_vertical.Add(pnl, flag=wx.EXPAND | wx.BOTTOM | wx.TOP,
                                  border=1)
 
-    def _render_warm(self, rgb_image: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _render_warm(rgb_image: np.ndarray) -> np.ndarray:
         interim_img = apply_rgb_filters(rgb_image,
-                                        red_filter=self.INCREASE_LOOKUP_TABLE,
-                                        blue_filter=self.DECREASE_LOOKUP_TABLE)
-        return apply_hue_filter(interim_img, self.INCREASE_LOOKUP_TABLE)
+                                        red_filter=INCREASE_LOOKUP_TABLE,
+                                        blue_filter=DECREASE_LOOKUP_TABLE)
+        return apply_hue_filter(interim_img, INCREASE_LOOKUP_TABLE)
 
-    def _render_cool(self, rgb_image: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _render_cool(rgb_image: np.ndarray) -> np.ndarray:
         interim_img = apply_rgb_filters(rgb_image,
-                                        red_filter=self.DECREASE_LOOKUP_TABLE,
-                                        blue_filter=self.INCREASE_LOOKUP_TABLE)
-        return apply_hue_filter(interim_img, self.DECREASE_LOOKUP_TABLE)
-
-    def _render_pencil_sketch(self, rgb_image: np.ndarray) -> np.ndarray:
-        sketch = convert_to_pencil_sketch(rgb_image)
-
-        canvas = load_img_resized('pencilsketch_bg.jpg',
-                                  (self.imgWidth, self.imgHeight))
-        if canvas is not None:
-            sketch = cv2.multiply(sketch, canvas, scale=1. / 256)
-
-        return cv2.cvtColor(sketch, cv2.COLOR_GRAY2RGB)
+                                        red_filter=DECREASE_LOOKUP_TABLE,
+                                        blue_filter=INCREASE_LOOKUP_TABLE)
+        return apply_hue_filter(interim_img, DECREASE_LOOKUP_TABLE)
 
     def process_frame(self, frame_rgb: np.ndarray) -> np.ndarray:
         """Process the frame of the camera (or other capture device)
@@ -102,7 +102,7 @@ class FilterLayout(BaseLayout):
         elif self.mode_cool.GetValue():
             return self._render_cool(frame_rgb)
         elif self.mode_sketch.GetValue():
-            return self._render_pencil_sketch(frame_rgb)
+            return pencil_sketch_on_canvas(frame_rgb, canvas=self.canvas)
         elif self.mode_cartoon.GetValue():
             return cartoonize(frame_rgb)
         else:
@@ -112,6 +112,7 @@ class FilterLayout(BaseLayout):
 def main():
     # open webcam
     capture = cv2.VideoCapture(0)
+    # opening the channel ourselves, if it failed to open.
     if not(capture.isOpened()):
         capture.open()
 
