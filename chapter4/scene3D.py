@@ -26,6 +26,7 @@ class SceneReconstruction3D:
         bundle adjustment and geometry fitting, which are out of scope for
         this project.
     """
+
     def __init__(self, K, dist):
         """Constructor
 
@@ -38,7 +39,23 @@ class SceneReconstruction3D:
         self.K_inv = np.linalg.inv(K)  # store inverse for fast access
         self.d = dist
 
-    def load_image_pair(self, img_path1, img_path2, use_pyr_down=True):
+    def load_image_pair(
+            self,
+            img_path1: str,
+            img_path2: str,
+            use_pyr_down: bool = True) -> None:
+        img1 = self.load_image(img_path1, use_pyr_down)
+        img2 = self.load_image(img_path2, use_pyr_down)
+        # undistort the images
+        img1 = cv2.undistort(img1, self.K, self.d)
+        img2 = cv2.undistort(img2, self.K, self.d)
+        self.img1, self.img2 = img1, img2
+
+    @staticmethod
+    def load_image(
+            img_path: str,
+            use_pyr_down: bool,
+            target_width: int = 600) -> np.ndarray:
         """Loads pair of images
 
             This method loads the two images for which the 3D scene should be
@@ -50,30 +67,18 @@ class SceneReconstruction3D:
             :param use_pyr_down: flag whether to downscale the images to
                                  roughly 600px width (True) or not (False)
         """
-        self.img1 = cv2.imread(img_path1, cv2.CV_8UC3)
-        self.img2 = cv2.imread(img_path2, cv2.CV_8UC3)
 
-        # make sure images are valid
-        if self.img1 is None:
-            sys.exit("Image " + img_path1 + " could not be loaded.")
-        if self.img2 is None:
-            sys.exit("Image " + img_path2 + " could not be loaded.")
+        img = cv2.imread(img_path, cv2.CV_8UC3)
 
-        if len(self.img1.shape) == 2:
-            self.img1 = cv2.cvtColor(self.img1, cv2.COLOR_GRAY2BGR)
-            self.img2 = cv2.cvtColor(self.img2, cv2.COLOR_GRAY2BGR)
+        # make sure image is valid
+        assert img is not None, f"Image {img_path} could not be loaded."
+        if len(img.shape) == 2:
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
         # scale down image if necessary
-        # to something close to 600px wide
-        target_width = 600
-        if use_pyr_down and self.img1.shape[1] > target_width:
-            while self.img1.shape[1] > 2*target_width:
-                self.img1 = cv2.pyrDown(self.img1)
-                self.img2 = cv2.pyrDown(self.img2)
-
-        # undistort the images
-        self.img1 = cv2.undistort(self.img1, self.K, self.d)
-        self.img2 = cv2.undistort(self.img2, self.K, self.d)
+        while use_pyr_down and img.shape[1] > 2 * target_width:
+            img = cv2.pyrDown(img)
+        return img
 
     def plot_optic_flow(self):
         """Plots optic flow field
@@ -81,27 +86,29 @@ class SceneReconstruction3D:
             This method plots the optic flow between the first and second
             image.
         """
-        self._extract_keypoints("flow")
+        self._extract_keypoints_flow()
 
-        img = self.img1
-        for i in xrange(len(self.match_pts1)):
-            cv2.line(img, tuple(self.match_pts1[i]), tuple(self.match_pts2[i]),
-                     color=(255, 0, 0))
-            theta = np.arctan2(self.match_pts2[i][1] - self.match_pts1[i][1],
-                               self.match_pts2[i][0] - self.match_pts1[i][0])
-            cv2.line(img, tuple(self.match_pts2[i]),
-                     (np.int(self.match_pts2[i][0] - 6*np.cos(theta+np.pi/4)),
-                      np.int(self.match_pts2[i][1] - 6*np.sin(theta+np.pi/4))),
-                     color=(255, 0, 0))
-            cv2.line(img, tuple(self.match_pts2[i]),
-                     (np.int(self.match_pts2[i][0] - 6*np.cos(theta-np.pi/4)),
-                      np.int(self.match_pts2[i][1] - 6*np.sin(theta-np.pi/4))),
-                     color=(255, 0, 0))
+        img = np.copy(self.img1)
+        color = (255, 0, 0)
+        for pt1, pt2 in zip(self.match_pts1, self.match_pts2):
+            cv2.line(img, tuple(pt1), tuple(pt2),
+                     color=color)
+            theta = np.arctan2(pt2[1] - pt1[1],
+                               pt2[0] - pt1[0])
+            # theta = np.arcctan2(*pt2-pt1)
+            cv2.line(img, tuple(pt2),
+                     (np.int(pt2[0] - 6 * np.cos(theta + np.pi / 4)),
+                      np.int(pt2[1] - 6 * np.sin(theta + np.pi / 4))),
+                     color=color)
+            cv2.line(img, tuple(pt2),
+                     (np.int(pt2[0] - 6 * np.cos(theta - np.pi / 4)),
+                      np.int(pt2[1] - 6 * np.sin(theta - np.pi / 4))),
+                     color=color)
 
         cv2.imshow("imgFlow", img)
         cv2.waitKey()
 
-    def draw_epipolar_lines(self, feat_mode="SURF"):
+    def draw_epipolar_lines(self, feat_mode: str = "SURF"):
         """Draws epipolar lines
 
             This method computes and draws the epipolar lines of the two
@@ -134,7 +141,7 @@ class SceneReconstruction3D:
         cv2.imshow("right", img3)
         cv2.waitKey()
 
-    def plot_rectified_images(self, feat_mode="SURF"):
+    def plot_rectified_images(self, feat_mode: str = "SURF"):
         """Plots rectified images
 
             This method computes and plots a rectified version of the two
@@ -150,7 +157,7 @@ class SceneReconstruction3D:
 
         R = self.Rt2[:, :3]
         T = self.Rt2[:, 3]
-        #perform the rectification
+        # perform the rectification
         R1, R2, P1, P2, Q, roi1, roi2 = cv2.stereoRectify(self.K, self.d,
                                                           self.K, self.d,
                                                           self.img1.shape[:2],
@@ -199,7 +206,7 @@ class SceneReconstruction3D:
                                       second_inliers.T).T
 
         # convert from homogeneous coordinates to 3D
-        pts3D = pts4D[:, :3]/np.repeat(pts4D[:, 3], 3).reshape(-1, 3)
+        pts3D = pts4D[:, :3] / np.repeat(pts4D[:, 3], 3).reshape(-1, 3)
 
         # plot with matplotlib
         Ys = pts3D[:, 0]
@@ -229,13 +236,12 @@ class SceneReconstruction3D:
         if feat_mode.lower() == "surf":
             # feature matching via SURF and BFMatcher
             self._extract_keypoints_surf()
+        elif feat_mode.lower() == "flow":
+            # feature matching via optic flow
+            self._extract_keypoints_flow()
         else:
-            if feat_mode.lower() == "flow":
-                # feature matching via optic flow
-                self._extract_keypoints_flow()
-            else:
-                sys.exit("Unknown feat_mode " + feat_mode +
-                         ". Use 'SURF' or 'FLOW'")
+            sys.exit("Unknown feat_mode " + feat_mode +
+                     ". Use 'SURF' or 'FLOW'")
 
     def _extract_keypoints_surf(self):
         """Extracts keypoints via SURF descriptors"""
@@ -246,33 +252,27 @@ class SceneReconstruction3D:
                                                                  None)
         second_key_points, second_desc = detector.detectAndCompute(self.img2,
                                                                    None)
-
         # match descriptors
         matcher = cv2.BFMatcher(cv2.NORM_L1, True)
         matches = matcher.match(first_desc, second_desc)
 
         # generate lists of point correspondences
-        first_match_points = np.zeros((len(matches), 2), dtype=np.float32)
-        second_match_points = np.zeros_like(first_match_points)
-        for i in range(len(matches)):
-            first_match_points[i] = first_key_points[matches[i].queryIdx].pt
-            second_match_points[i] = second_key_points[matches[i].trainIdx].pt
-
-        self.match_pts1 = first_match_points
-        self.match_pts2 = second_match_points
+        self.match_pts1 = np.array(
+            [first_key_points[match.queryIdx].pt for match in matches])
+        self.match_pts2 = np.array(
+            [second_key_points[match.trainIdx].pt for match in matches])
 
     def _extract_keypoints_flow(self):
         """Extracts keypoints via optic flow"""
         # find FAST features
-        fast = cv2.FastFeatureDetector()
-        first_key_points = fast.detect(self.img1, None)
+        fast = cv2.FastFeatureDetector_create()
+        first_key_points = fast.detect(self.img1)
 
         first_key_list = [i.pt for i in first_key_points]
         first_key_arr = np.array(first_key_list).astype(np.float32)
 
-        second_key_arr, status, err = cv2.calcOpticalFlowPyrLK(self.img1,
-                                                               self.img2,
-                                                               first_key_arr)
+        second_key_arr, status, err = cv2.calcOpticalFlowPyrLK(
+            self.img1, self.img2, first_key_arr, None)
 
         # filter out the points with high error
         # keep only entries with status=1 and small error
@@ -308,10 +308,10 @@ class SceneReconstruction3D:
         for i in range(len(self.Fmask)):
             if self.Fmask[i]:
                 # normalize and homogenize the image coordinates
-                first_inliers.append(self.K_inv.dot([self.match_pts1[i][0],
-                                     self.match_pts1[i][1], 1.0]))
-                second_inliers.append(self.K_inv.dot([self.match_pts2[i][0],
-                                      self.match_pts2[i][1], 1.0]))
+                first_inliers.append(self.K_inv.dot(
+                    [self.match_pts1[i][0], self.match_pts1[i][1], 1.0]))
+                second_inliers.append(self.K_inv.dot(
+                    [self.match_pts2[i][0], self.match_pts2[i][1], 1.0]))
 
         # Determine the correct choice of second camera matrix
         # only in one of the four configurations will all the points be in
@@ -350,8 +350,8 @@ class SceneReconstruction3D:
         c = img1.shape[1]
         for r, pt1, pt2 in zip(lines, pts1, pts2):
             color = tuple(np.random.randint(0, 255, 3).tolist())
-            x0, y0 = map(int, [0, -r[2]/r[1]])
-            x1, y1 = map(int, [c, -(r[2] + r[0]*c) / r[1]])
+            x0, y0 = map(int, [0, -r[2] / r[1]])
+            x1, y1 = map(int, [c, -(r[2] + r[0] * c) / r[1]])
             cv2.line(img1, (x0, y0), (x1, y1), color, 1)
             cv2.circle(img1, tuple(pt1), 5, color, -1)
             cv2.circle(img2, tuple(pt2), 5, color, -1)
@@ -363,8 +363,8 @@ class SceneReconstruction3D:
            images"""
         rot_inv = rot
         for first, second in zip(first_points, second_points):
-            first_z = np.dot(rot[0, :] - second[0]*rot[2, :],
-                             trans) / np.dot(rot[0, :] - second[0]*rot[2, :],
+            first_z = np.dot(rot[0, :] - second[0] * rot[2, :],
+                             trans) / np.dot(rot[0, :] - second[0] * rot[2, :],
                                              second)
             first_3d_point = np.array([first[0] * first_z,
                                        second[0] * first_z, first_z])
@@ -381,18 +381,18 @@ class SceneReconstruction3D:
         # build A matrix for homogeneous equation system Ax=0
         # assume X = (x,y,z,1) for Linear-LS method
         # which turns it into AX=B system, where A is 4x3, X is 3x1 & B is 4x1
-        A = np.array([u1[0]*P1[2, 0] - P1[0, 0], u1[0]*P1[2, 1] - P1[0, 1],
-                      u1[0]*P1[2, 2] - P1[0, 2], u1[1]*P1[2, 0] - P1[1, 0],
-                      u1[1]*P1[2, 1] - P1[1, 1], u1[1]*P1[2, 2] - P1[1, 2],
-                      u2[0]*P2[2, 0] - P2[0, 0], u2[0]*P2[2, 1] - P2[0, 1],
-                      u2[0]*P2[2, 2] - P2[0, 2], u2[1]*P2[2, 0] - P2[1, 0],
-                      u2[1]*P2[2, 1] - P2[1, 1],
-                      u2[1]*P2[2, 2] - P2[1, 2]]).reshape(4, 3)
+        A = np.array([u1[0] * P1[2, 0] - P1[0, 0], u1[0] * P1[2, 1] - P1[0, 1],
+                      u1[0] * P1[2, 2] - P1[0, 2], u1[1] * P1[2, 0] - P1[1, 0],
+                      u1[1] * P1[2, 1] - P1[1, 1], u1[1] * P1[2, 2] - P1[1, 2],
+                      u2[0] * P2[2, 0] - P2[0, 0], u2[0] * P2[2, 1] - P2[0, 1],
+                      u2[0] * P2[2, 2] - P2[0, 2], u2[1] * P2[2, 0] - P2[1, 0],
+                      u2[1] * P2[2, 1] - P2[1, 1],
+                      u2[1] * P2[2, 2] - P2[1, 2]]).reshape(4, 3)
 
-        B = np.array([-(u1[0]*P1[2, 3] - P1[0, 3]),
-                      -(u1[1]*P1[2, 3] - P1[1, 3]),
-                      -(u2[0]*P2[2, 3] - P2[0, 3]),
-                      -(u2[1]*P2[2, 3] - P2[1, 3])]).reshape(4, 1)
+        B = np.array([-(u1[0] * P1[2, 3] - P1[0, 3]),
+                      -(u1[1] * P1[2, 3] - P1[1, 3]),
+                      -(u2[0] * P2[2, 3] - P2[0, 3]),
+                      -(u2[1] * P2[2, 3] - P2[1, 3])]).reshape(4, 1)
 
         ret, X = cv2.solve(A, B, flags=cv2.DECOMP_SVD)
         return X.reshape(1, 3)
