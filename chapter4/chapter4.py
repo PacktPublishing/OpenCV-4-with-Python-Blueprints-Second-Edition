@@ -34,7 +34,10 @@ def main():
     # draw 3D point cloud of fountain
     # use "pan axes" button in pyplot to inspect the cloud (rotate and zoom
     # to convince you of the result)
-    scene.plot_point_cloud()
+    # scene.draw_epipolar_lines()
+    # scene.plot_rectified_images()
+    scene.plot_optic_flow()
+    # scene.plot_point_cloud()
 
 
 if __name__ == '__main__':
