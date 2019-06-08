@@ -92,26 +92,26 @@ class CameraCalibration(BaseLayout):
             # we have already collected enough frames, so now we want to
             # calculate the intrinsic camera matrix (K) and the distortion
             # vector (dist)
-            print "Calibrating..."
+            print("Calibrating...")
             ret, K, dist, rvecs, tvecs = cv2.calibrateCamera(self.obj_points,
                                                              self.img_points,
                                                              (self.imgHeight,
                                                               self.imgWidth),
                                                              None, None)
-            print "K=", K
-            print "dist=", dist
+            print("K=", K)
+            print("dist=", dist)
 
             # double-check reconstruction error (should be as close to zero as
             # possible)
             mean_error = 0
-            for i in xrange(len(self.obj_points)):
+            for i in range(len(self.obj_points)):
                 img_points2, _ = cv2.projectPoints(self.obj_points[i],
                                                    rvecs[i], tvecs[i], K, dist)
                 error = cv2.norm(self.img_points[i], img_points2,
                                  cv2.NORM_L2) / len(img_points2)
                 mean_error += error
 
-            print "mean error=", mean_error
+            print("mean error=", mean_error)
 
             self.recording = False
             self._reset_recording()
@@ -137,12 +137,8 @@ def main():
     if not(capture.isOpened()):
         capture.open()
 
-    if hasattr(cv2, 'cv'):
-        capture.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 640)
-        capture.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, 480)
-    else:
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     # start graphical user interface
     app = wx.App()
