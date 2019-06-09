@@ -44,12 +44,9 @@ class SceneReconstruction3D:
             img_path1: str,
             img_path2: str,
             use_pyr_down: bool = True) -> None:
-        img1 = self.load_image(img_path1, use_pyr_down)
-        img2 = self.load_image(img_path2, use_pyr_down)
-        # undistort the images
-        img1 = cv2.undistort(img1, self.K, self.d)
-        img2 = cv2.undistort(img2, self.K, self.d)
-        self.img1, self.img2 = img1, img2
+
+        self.img1, self.img2 = [cv2.undistort(self.load_image(path, use_pyr_down), self.K, self.d)
+            for path in (img_path1,img_path2)]
 
     @staticmethod
     def load_image(
@@ -89,33 +86,21 @@ class SceneReconstruction3D:
         self._extract_keypoints_flow()
 
         img = np.copy(self.img1)
-        color = (255, 0, 0)
         for pt1, pt2 in zip(self.match_pts1, self.match_pts2):
-            cv2.line(img, tuple(pt1), tuple(pt2),
-                     color=color)
-            theta = np.arctan2(pt2[1] - pt1[1],
-                               pt2[0] - pt1[0])
-            # theta = np.arcctan2(*pt2-pt1)
-            cv2.line(img, tuple(pt2),
-                     (np.int(pt2[0] - 6 * np.cos(theta + np.pi / 4)),
-                      np.int(pt2[1] - 6 * np.sin(theta + np.pi / 4))),
-                     color=color)
-            cv2.line(img, tuple(pt2),
-                     (np.int(pt2[0] - 6 * np.cos(theta - np.pi / 4)),
-                      np.int(pt2[1] - 6 * np.sin(theta - np.pi / 4))),
-                     color=color)
+            cv2.arrowedLine(img, tuple(pt1), tuple(pt2),
+                     color=(255, 0, 0))
 
         cv2.imshow("imgFlow", img)
         cv2.waitKey()
 
-    def draw_epipolar_lines(self, feat_mode: str = "SURF"):
+    def draw_epipolar_lines(self, feat_mode: str = "SIFT"):
         """Draws epipolar lines
 
             This method computes and draws the epipolar lines of the two
             loaded images.
 
             :param feat_mode: whether to use rich descriptors for feature
-                              matching ("surf") or optic flow ("flow")
+                              matching ("sift") or optic flow ("flow")
         """
         self._extract_keypoints(feat_mode)
         self._find_fundamental_matrix()
@@ -141,14 +126,14 @@ class SceneReconstruction3D:
         cv2.imshow("right", img3)
         cv2.waitKey()
 
-    def plot_rectified_images(self, feat_mode: str = "SURF"):
+    def plot_rectified_images(self, feat_mode: str = "SIFT"):
         """Plots rectified images
 
             This method computes and plots a rectified version of the two
             images side by side.
 
             :param feat_mode: whether to use rich descriptors for feature
-                              matching ("surf") or optic flow ("flow")
+                              matching ("sift") or optic flow ("flow")
         """
         self._extract_keypoints(feat_mode)
         self._find_fundamental_matrix()
@@ -185,14 +170,14 @@ class SceneReconstruction3D:
         cv2.imshow('imgRectified', img)
         cv2.waitKey()
 
-    def plot_point_cloud(self, feat_mode="SURF"):
+    def plot_point_cloud(self, feat_mode="sift"):
         """Plots 3D point cloud
 
             This method generates and plots a 3D point cloud of the recovered
             3D scene.
 
             :param feat_mode: whether to use rich descriptors for feature
-                              matching ("surf") or optic flow ("flow")
+                              matching ("sift") or optic flow ("flow")
         """
         self._extract_keypoints(feat_mode)
         self._find_fundamental_matrix()
@@ -227,27 +212,25 @@ class SceneReconstruction3D:
 
             This method extracts keypoints for feature matching based on
             a specified mode:
-            - "surf": use rich SURF descriptor
+            - "sift": use rich sift descriptor
             - "flow": use optic flow
 
-            :param feat_mode: keypoint extraction mode ("surf" or "flow")
+            :param feat_mode: keypoint extraction mode ("sift" or "flow")
         """
         # extract features
-        if feat_mode.lower() == "surf":
-            # feature matching via SURF and BFMatcher
-            self._extract_keypoints_surf()
+        if feat_mode.lower() == "sift":
+            # feature matching via sift and BFMatcher
+            self._extract_keypoints_sift()
         elif feat_mode.lower() == "flow":
             # feature matching via optic flow
             self._extract_keypoints_flow()
         else:
-            sys.exit("Unknown feat_mode " + feat_mode +
-                     ". Use 'SURF' or 'FLOW'")
+            sys.exit(f"Unknown feat_mode {feat_mode}. Use 'sift' or 'FLOW'")
 
-    def _extract_keypoints_surf(self):
-        """Extracts keypoints via SURF descriptors"""
+    def _extract_keypoints_sift(self):
+        """Extracts keypoints via sift descriptors"""
         # extract keypoints and descriptors from both images
-        # detector = cv2.BRISK_create(250)
-        detector = cv2.BRISK_create()
+        detector = cv2.xfeatures2d.SIFT_create()
         first_key_points, first_desc = detector.detectAndCompute(self.img1,
                                                                  None)
         second_key_points, second_desc = detector.detectAndCompute(self.img2,
@@ -305,13 +288,11 @@ class SceneReconstruction3D:
         # fundamental matrix
         first_inliers = []
         second_inliers = []
-        for i in range(len(self.Fmask)):
-            if self.Fmask[i]:
+        for pt1,pt2, mask in zip(self.match_pts1,self.match_pts2,self.Fmask):
+            if mask:
                 # normalize and homogenize the image coordinates
-                first_inliers.append(self.K_inv.dot(
-                    [self.match_pts1[i][0], self.match_pts1[i][1], 1.0]))
-                second_inliers.append(self.K_inv.dot(
-                    [self.match_pts2[i][0], self.match_pts2[i][1], 1.0]))
+                first_inliers.append(self.K_inv.dot([pt1[0], pt1[1], 1.0]))
+                second_inliers.append(self.K_inv.dot([pt2[0], pt2[1], 1.0]))
 
         # Determine the correct choice of second camera matrix
         # only in one of the four configurations will all the points be in
