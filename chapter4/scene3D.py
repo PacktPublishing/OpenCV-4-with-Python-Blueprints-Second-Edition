@@ -45,8 +45,11 @@ class SceneReconstruction3D:
             img_path2: str,
             use_pyr_down: bool = True) -> None:
 
-        self.img1, self.img2 = [cv2.undistort(self.load_image(path, use_pyr_down), self.K, self.d)
-            for path in (img_path1,img_path2)]
+        self.img1, self.img2 = [
+            cv2.undistort(
+                self.load_image(
+                    path, use_pyr_down), self.K, self.d) for path in (
+                img_path1, img_path2)]
 
     @staticmethod
     def load_image(
@@ -88,7 +91,7 @@ class SceneReconstruction3D:
         img = np.copy(self.img1)
         for pt1, pt2 in zip(self.match_pts1, self.match_pts2):
             cv2.arrowedLine(img, tuple(pt1), tuple(pt2),
-                     color=(255, 0, 0))
+                            color=(255, 0, 0))
 
         cv2.imshow("imgFlow", img)
         cv2.waitKey()
@@ -185,25 +188,23 @@ class SceneReconstruction3D:
         self._find_camera_matrices_rt()
 
         # triangulate points
-        first_inliers = np.array(self.match_inliers1).reshape(-1, 3)[:, :2]
-        second_inliers = np.array(self.match_inliers2).reshape(-1, 3)[:, :2]
+        first_inliers = np.array(self.match_inliers1)[:, :2]
+        second_inliers = np.array(self.match_inliers2)[:, :2]
         pts4D = cv2.triangulatePoints(self.Rt1, self.Rt2, first_inliers.T,
                                       second_inliers.T).T
 
         # convert from homogeneous coordinates to 3D
-        pts3D = pts4D[:, :3] / np.repeat(pts4D[:, 3], 3).reshape(-1, 3)
+        pts3D = pts4D[:, :3] / pts4D[:, 3, None]
 
         # plot with matplotlib
-        Ys = pts3D[:, 0]
-        Zs = pts3D[:, 1]
-        Xs = pts3D[:, 2]
+        Xs, Zs, Ys = [pts3D[:, i] for i in range(3)]
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(Xs, Ys, Zs, c='r', marker='o')
-        ax.set_xlabel('Y')
-        ax.set_ylabel('Z')
-        ax.set_zlabel('X')
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
         plt.title('3D point cloud: Use pan axes button below to inspect')
         plt.show()
 
@@ -288,7 +289,8 @@ class SceneReconstruction3D:
         # fundamental matrix
         first_inliers = []
         second_inliers = []
-        for pt1,pt2, mask in zip(self.match_pts1,self.match_pts2,self.Fmask):
+        for pt1, pt2, mask in zip(
+                self.match_pts1, self.match_pts2, self.Fmask):
             if mask:
                 # normalize and homogenize the image coordinates
                 first_inliers.append(self.K_inv.dot([pt1[0], pt1[1], 1.0]))
@@ -297,24 +299,15 @@ class SceneReconstruction3D:
         # Determine the correct choice of second camera matrix
         # only in one of the four configurations will all the points be in
         # front of both cameras
-        # First choice: R = U * Wt * Vt, T = +u_3 (See Hartley Zisserman 9.19)
-        R = U.dot(W).dot(Vt)
-        T = U[:, 2]
-        if not self._in_front_of_both_cameras(first_inliers, second_inliers,
-                                              R, T):
-            # Second choice: R = U * W * Vt, T = -u_3
-            T = - U[:, 2]
 
-        if not self._in_front_of_both_cameras(first_inliers, second_inliers,
-                                              R, T):
-            # Third choice: R = U * Wt * Vt, T = u_3
-            R = U.dot(W.T).dot(Vt)
-            T = U[:, 2]
+        R = T = None
+        for r in (U.dot(W).dot(Vt), U.dot(W.T).dot(Vt)):
+            for t in (U[:, 2], -U[:, 2]):
+                if self._in_front_of_both_cameras(
+                        first_inliers, second_inliers, r, t):
+                    R, T = r, t
 
-            if not self._in_front_of_both_cameras(first_inliers,
-                                                  second_inliers, R, T):
-                # Fourth choice: R = U * Wt * Vt, T = -u_3
-                T = - U[:, 2]
+        assert R is not None, "Camera matricies were never found"
 
         self.match_inliers1 = first_inliers
         self.match_inliers2 = second_inliers
