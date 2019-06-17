@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import wx
 
-from gui import BaseLayout
+from wx_gui import BaseLayout
 
 
 class CameraCalibration(BaseLayout):
@@ -18,8 +18,7 @@ class CameraCalibration(BaseLayout):
         http://docs.opencv.org/doc/tutorials/calib3d/camera_calibration/camera_calibration.html
     """
 
-    def _init_custom_layout(self):
-        """Initializes camera calibration"""
+    def augment_layout(self):
         # setting chessboard size
         self.chessboard_size = (9, 6)
 
@@ -34,8 +33,6 @@ class CameraCalibration(BaseLayout):
         self.record_min_num_frames = 20
         self._reset_recording()
 
-    def _create_custom_layout(self):
-        """Creates a horizontal layout with a single button"""
         pnl = wx.Panel(self, -1)
         self.button_calibrate = wx.Button(pnl, label='Calibrate Camera')
         self.Bind(wx.EVT_BUTTON, self._on_button_calibrate)
@@ -46,7 +43,7 @@ class CameraCalibration(BaseLayout):
         self.panels_vertical.Add(pnl, flag=wx.EXPAND | wx.BOTTOM | wx.TOP,
                                  border=1)
 
-    def _process_frame(self, frame):
+    def process_frame(self, frame):
         """Processes each frame
 
             If recording mode is on (self.recording==True), this method will
