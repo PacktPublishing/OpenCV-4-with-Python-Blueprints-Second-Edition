@@ -14,6 +14,7 @@ from os import path
 from saliency import get_saliency_map, get_proto_objects_map
 from tracking import MultipleObjectsTracker
 
+import time
 
 def main(video_file='soccer.avi', roi=((140, 100), (500, 600))):
     if not path.isfile(video_file):
@@ -38,8 +39,8 @@ def main(video_file='soccer.avi', roi=((140, 100), (500, 600))):
         cv2.imshow('original', img)
         cv2.imshow('saliency', saliency)
         cv2.imshow('objects', objects)
-        cv2.imshow('tracker', mot.advance_frame(img, objects))
-
+        cv2.imshow('tracker', mot.advance_frame(img, objects,saliency))
+        # time.sleep(1)
         if cv2.waitKey(100) & 0xFF == ord('q'):
             break
 

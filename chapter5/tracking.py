@@ -6,7 +6,9 @@
 import cv2
 import numpy as np
 import copy
+import itertools
 
+# cv2.
 
 class MultipleObjectsTracker:
     """
@@ -18,7 +20,7 @@ class MultipleObjectsTracker:
     mean-shift tracking for object tracking.
     """
 
-    def __init__(self, min_area=400, min_shift2=5):
+    def __init__(self, min_area=400, min_shift2=1):
         """
         Constructor
 
@@ -30,7 +32,6 @@ class MultipleObjectsTracker:
                            from frame to frame ot be considered a real
                            object
         """
-        self.object_roi = []
         self.object_box = []
 
         self.min_cnt_area = min_area
@@ -39,9 +40,11 @@ class MultipleObjectsTracker:
         # Setup the termination criteria, either 100 iteration or move by at
         # least 1 pt
         self.term_crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
-                          10, 1)
+                          5, 1)
+        self.rejected = 0
+        self.num_tracked = 0
 
-    def advance_frame(self, frame, proto_objects_map):
+    def advance_frame(self, frame, proto_objects_map,saliency):
         """
         Advance the algorithm by a single frame
 
@@ -64,7 +67,6 @@ class MultipleObjectsTracker:
         """
         print("advanced")
         tracker = copy.deepcopy(frame)
-
         # Build a list all bounding boxes found from the
         # current proto-objects map
         box_all = self._boxes_from_saliency(proto_objects_map,self.min_cnt_area)
@@ -72,34 +74,32 @@ class MultipleObjectsTracker:
         # find all bounding boxes extrapolated from last frame
         # via mean-shift tracking
         # meanshift_boxes = self._boxes_from_meanshift(frame)
-        if len(self.object_roi):
-            box_all = self._boxes_from_meanshift(frame)
-        # box_all += meanshift_boxes
-
-        # only keep those that are both salient and in mean shift
-        group_thresh = 1 if False and len(self.object_roi) > 3 else 0
-        box_grouped, _ = cv2.groupRectangles(box_all, group_thresh, 50)
-        print("gp",group_thresh, len(box_grouped),len(box_all))
-
-        # update mean-shift bookkeeping for remaining boxes
-        self._update_mean_shift_bookkeeping(frame, box_grouped)
+        if len(self.object_box) >= len(box_all) - self.rejected:
+            # if len(self.object_box):
+            print("box all overwrite")
+            box_all = self._boxes_from_meanshift2(saliency)
+            self.num_tracked+=1
+        else:
+            self.rejected = 0
+            self.num_tracked = 0
+            self.centeres = self.get_centeres(box_all)
+        self.object_box = box_all
 
         # draw remaining boxes
-        for (x, y, w, h) in box_grouped:
-            cv2.rectangle(tracker, (x, y), (x + w, y + h),
-                          (0, 255, 0), 2)
-
+        self.draw_boxes(tracker)
         return tracker
+    def draw_boxes(self,frame):
+        # font = cv2.FONT_HERSHEY_SIMPLEX
+        # cv2.putText(img,'OpenCV',(10,500), font, 4,(255,255,255),2,cv2.LINE_AA)
+        # cv.PutText(img, text, org, font, color) → None¶
+        for (x, y, w, h),num in zip(self.object_box,itertools.count()):
+            cv2.rectangle(frame, (x, y), (x + w, y + h),
+                          (0, 255, 0), 2)
+            cv2.putText(frame, str(num),(x,y),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,255,255))
+            # cv2.putText(frame, str(num), org, fontFace, fontScale, color[, thickness[, lineType[, bottomLeftOrigin]]])
     @staticmethod
     def _boxes_from_saliency(proto_objects_map,min_cnt_area):
         """
-        Add to the list all bounding boxes found with the saliency map
-
-        A saliency map is used to find objects worth tracking in each
-        frame. This information is combined with a mean-shift tracker
-        to find objects of relevance that move, and to discard everything
-        else.
-
         :param proto_objects_map: proto-objects map of the current frame
         :param box_all: append bounding boxes from saliency to this list
         :returns: new list of all collected bounding boxes
@@ -108,74 +108,9 @@ class MultipleObjectsTracker:
         cnt_sal, _ = cv2.findContours(proto_objects_map, 1, 2)
         sal_boxes =  [cv2.boundingRect(cnt) for cnt in cnt_sal
                 if cv2.contourArea(cnt) > min_cnt_area]
-        print("sal_boxes", sal_boxes)
         return sal_boxes
-
-    def _boxes_from_meanshift(self, frame):
-        """
-        Add to the list all bounding boxes found with mean-shift tracking
-
-        Mean-shift tracking is used to track objects from frame to frame.
-        This information is combined with a saliency map to discard
-        false-positives and focus only on relevant objects that move.
-
-        :param frame: current RGB image frame
-        :box_all: append bounding boxes from tracking to this list
-        :returns: new list of all collected bounding boxes
-        """
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-        meanshift_boxes = []
-        new_boxes = []
-        print("num bookkeep", len(self.object_roi))
-        for roi_hist, box_old in zip(self.object_roi,self.object_box):
-            dst = cv2.calcBackProject([hsv], [0], roi_hist, [0, 180], 1)
-            ret, box_new = cv2.meanShift(dst, tuple(box_old), self.term_crit)
-            new_boxes.append(box_new)
-
-            # discard boxes that don't move
-            (xo, yo, wo, ho) = box_old
-            (xn, yn, wn, hn) = box_new
-
-            co = [xo + wo / 2, yo + ho / 2]
-            cn = [xn + wn / 2, yn + hn / 2]
-            # if (co[0] - cn[0])**2 + (co[1] - cn[1])**2 >= self.min_shift2:
-            meanshift_boxes.append(box_new)
-        print("meanshift boxes", meanshift_boxes)
+    def get_centeres(self,boxes):
+        return [(x+w/2,y+h/2) for (x,y,w,h) in boxes]
+    def _boxes_from_meanshift2(self, saliency):
+        meanshift_boxes = [cv2.meanShift(saliency,tuple(box_old),self.term_crit)[1] for box_old in self.object_box]
         return meanshift_boxes
-    @staticmethod
-    def get_mask(hsv_roi):
-        sensitivity = 20
-        frr, tor = np.array([60 - sensitivity, 50, 50]), np.array([60 + sensitivity, 255, 255])
-        mask_saturation = cv2.inRange(hsv_roi, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
-        mask_not_green  = 255 - cv2.inRange(hsv_roi,frr,tor)
-        return mask_saturation &  mask_not_green
-    def _update_mean_shift_bookkeeping(self, frame, box_grouped):
-        """
-        Preprocess all valid bounding boxes for mean-shift tracking
-
-        This method preprocesses all relevant bounding boxes (those that
-        have been detected by both mean-shift tracking and saliency) for
-        the next mean-shift step.
-
-        :param frame: current RGB input frame
-        :param box_grouped: list of bounding boxes
-        """
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-        self.object_roi = []
-        self.object_box = []
-
-        for box in box_grouped:
-            (x, y, w, h) = box
-            hsv_roi = hsv[y:y + h, x:x + w]
-            mask = self.get_mask(hsv_roi)
-            roi_hist = cv2.calcHist([hsv_roi],[0],mask,[180],[0,180])
-
-            # mask = cv2.inRange(hsv_roi, np.array((0., 60., 32.)),
-            #                    np.array((180., 255., 255.)))
-            # roi_hist = cv2.calcHist([hsv_roi], [0], mask, [180], [0, 180])
-            # cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)
-
-            self.object_roi.append(roi_hist)
-            self.object_box.append(box)
