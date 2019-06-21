@@ -38,11 +38,10 @@ class MultipleObjectsTracker:
         self.term_crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
                           5, 1)
 
-    def advance_frame(
-            self,
-            frame: np.ndarray,
-            proto_objects_map: np.ndarray,
-            saliency: np.ndarray) -> np.ndarray:
+    def advance_frame(self,
+                      frame: np.ndarray,
+                      proto_objects_map: np.ndarray,
+                      saliency: np.ndarray) -> np.ndarray:
         """
         Advance the algorithm by a single frame
 
@@ -53,6 +52,7 @@ class MultipleObjectsTracker:
         :param frame: New input RGB frame
         :param proto_objects_map: corresponding proto-objects map of the
                                   frame
+        :param saliency: TODO: EXPLAIN
         :returns: frame annotated with bounding boxes around all objects
                   that are being tracked
         """
@@ -61,14 +61,15 @@ class MultipleObjectsTracker:
         # Build a list all bounding boxes found from the
         # current proto-objects map
         object_contours, _ = cv2.findContours(proto_objects_map, 1, 2)
-        object_boxes = [cv2.boundingRect(contour) for contour in object_contours
+        object_boxes = [cv2.boundingRect(contour)
+                        for contour in object_contours
                         if cv2.contourArea(contour) > self.min_object_area]
 
         if len(self.object_boxes) >= len(object_boxes):
             # Continue tracking with meanshift if number of salient objects
             # didn't increase
-            object_boxes = [cv2.meanShift(saliency, box, self.term_crit)[
-                1] for box in self.object_boxes]
+            object_boxes = [cv2.meanShift(saliency, box, self.term_crit)[1]
+                            for box in self.object_boxes]
             self.num_frame_tracked += 1
         else:
             # Otherwise restart tracking
@@ -85,7 +86,8 @@ class MultipleObjectsTracker:
         # Find total displacement length for each object
         # and normalize by object size
         displacements = [((x + w / 2 - cx)**2 + (y + w / 2 - cy)**2)**0.5 / w
-                         for (x, y, w, h), (cx, cy) in zip(self.object_boxes, self.object_initial_centers)]
+                         for (x, y, w, h), (cx, cy)
+                         in zip(self.object_boxes, self.object_initial_centers)]
         # Draw objects that move and their numbers
         for (x, y, w, h), displacement, i in zip(
                 self.object_boxes, displacements, itertools.count()):
