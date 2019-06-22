@@ -92,7 +92,7 @@ class MultipleObjectsTracker:
         for (x, y, w, h), displacement, i in zip(
                 self.object_boxes, displacements, itertools.count()):
             # Draw only those which have some avarage speed
-            if displacement / (self.num_frame_tracked + 0.01) > 0.02:
+            if displacement / (self.num_frame_tracked + 0.01) > self.min_speed_per_pix:
                 cv2.rectangle(frame, (x, y), (x + w, y + h),
                               (0, 255, 0), 2)
                 cv2.putText(frame, str(i), (x, y),
