@@ -3,6 +3,7 @@
 
 """A module for camera calibration using a chessboard"""
 
+
 import cv2
 import numpy as np
 import wx
@@ -13,12 +14,22 @@ from wx_gui import BaseLayout
 class CameraCalibration(BaseLayout):
     """Camera calibration
 
-        This class performs camera calibration on a webcam video feed using
+        Performs camera calibration on a webcam video feed using
         the chessboard approach described here:
         http://docs.opencv.org/doc/tutorials/calib3d/camera_calibration/camera_calibration.html
     """
 
     def augment_layout(self):
+        pnl = wx.Panel(self, -1)
+        self.button_calibrate = wx.Button(pnl, label='Calibrate Camera')
+        self.Bind(wx.EVT_BUTTON, self._on_button_calibrate)
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(self.button_calibrate)
+        pnl.SetSizer(hbox)
+
+        self.panels_vertical.Add(pnl, flag=wx.EXPAND | wx.BOTTOM | wx.TOP,
+                                 border=1)
+
         # setting chessboard size
         self.chessboard_size = (9, 6)
 
@@ -30,18 +41,8 @@ class CameraCalibration(BaseLayout):
 
         # prepare recording
         self.recording = False
-        self.record_min_num_frames = 20
+        self.record_min_num_frames = 15
         self._reset_recording()
-
-        pnl = wx.Panel(self, -1)
-        self.button_calibrate = wx.Button(pnl, label='Calibrate Camera')
-        self.Bind(wx.EVT_BUTTON, self._on_button_calibrate)
-        hbox = wx.BoxSizer(wx.HORIZONTAL)
-        hbox.Add(self.button_calibrate)
-        pnl.SetSizer(hbox)
-
-        self.panels_vertical.Add(pnl, flag=wx.EXPAND | wx.BOTTOM | wx.TOP,
-                                 border=1)
 
     def process_frame(self, frame):
         """Processes each frame
@@ -64,17 +65,16 @@ class CameraCalibration(BaseLayout):
 
         # else we're recording
         img_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY).astype(np.uint8)
-
         if self.record_cnt < self.record_min_num_frames:
             # need at least some number of chessboard samples before we can
             # calculate the intrinsic matrix
+
             ret, corners = cv2.findChessboardCorners(img_gray,
                                                      self.chessboard_size,
                                                      None)
-
             if ret:
-                cv2.drawChessboardCorners(frame, self.chessboard_size, corners,
-                                          ret)
+                print(f"{self.record_min_num_frames - self.record_cnt} chessboards remain")
+                cv2.drawChessboardCorners(frame, self.chessboard_size, corners, ret)
 
                 # refine found corners
                 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
@@ -101,10 +101,11 @@ class CameraCalibration(BaseLayout):
             # double-check reconstruction error (should be as close to zero as
             # possible)
             mean_error = 0
-            for i in range(len(self.obj_points)):
-                img_points2, _ = cv2.projectPoints(self.obj_points[i],
-                                                   rvecs[i], tvecs[i], K, dist)
-                error = cv2.norm(self.img_points[i], img_points2,
+            for obj_point, rvec, tvec, img_point in zip(
+                    self.obj_points, rvecs, tvecs, self.img_points):
+                img_points2, _ = cv2.projectPoints(
+                    obj_point, rvec, tvec, K, dist)
+                error = cv2.norm(img_point, img_points2,
                                  cv2.NORM_L2) / len(img_points2)
                 mean_error += error
 
@@ -113,7 +114,6 @@ class CameraCalibration(BaseLayout):
             self.recording = False
             self._reset_recording()
             self.button_calibrate.Enable()
-
         return frame
 
     def _on_button_calibrate(self, event):
@@ -131,15 +131,13 @@ class CameraCalibration(BaseLayout):
 
 def main():
     capture = cv2.VideoCapture(0)
-    if not(capture.isOpened()):
-        capture.open()
-
+    assert capture.isOpened(), "Can not connect to camera"
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     # start graphical user interface
     app = wx.App()
-    layout = CameraCalibration(capture, title='Camera Calibration')
+    layout = CameraCalibration(capture, title='Camera Calibration', fps=2)
     layout.Show(True)
     app.MainLoop()
 
