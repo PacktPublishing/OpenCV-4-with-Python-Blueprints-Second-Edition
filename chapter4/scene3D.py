@@ -9,7 +9,7 @@ import sys
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
-
+from matplotlib import cm
 
 class SceneReconstruction3D:
     """3D scene reconstruction
@@ -201,7 +201,7 @@ class SceneReconstruction3D:
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(Xs, Ys, Zs, c='r', marker='o')
+        ax.scatter(Xs, Ys, Zs, c=Ys,cmap=cm.hsv, marker='o')
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
