@@ -21,6 +21,15 @@ __author__ = "Michael Beyeler"
 __license__ = "GNU GPL 3.0 or later"
 
 
+def train_MLP(X_train, y_train):
+    mlp = cv2.ml.ANN_MLP_create()
+    mlp.setLayerSizes(np.array([784, 512, 512, 10]))
+    mlp.setActivationFunction(cv2.ml.ANN_MLP_SIGMOID_SYM, 2.5, 1.0)
+    mlp.setTrainingMethod(cv2.ml.ANN_MLP.BACKPROP)
+    mlp.train(X_train, cv2.ml.ROW_SAMPLE, y_train)
+    return mlp
+
+
 def train_one_vs_all_SVM(X_train, y_train):
     single_svm = cv2.ml.SVM_create()
     single_svm.setKernel(cv2.ml.SVM_LINEAR)
@@ -33,10 +42,11 @@ def train_one_vs_all_SVM(X_train, y_train):
 
 def main():
     strategies = {
-        'one-vs-all': train_one_vs_all_SVM,
+        'SVM': train_one_vs_all_SVM,
+        'MLP': train_MLP,
     }
     # features = [None, 'gray', 'rgb', 'hsv', 'hog']
-    features = [None, 'rgb']
+    features = ['rgb']
 
     accuracy = np.zeros((len(strategies), len(features)))
     precision = np.zeros((len(strategies), len(features)))

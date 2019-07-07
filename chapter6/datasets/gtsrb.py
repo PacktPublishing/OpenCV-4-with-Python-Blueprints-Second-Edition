@@ -72,7 +72,7 @@ def load_data(rootpath="datasets/gtsrb_training", feature=None, cut_roi=True,
         gt_file.close()
 
     # perform feature extraction
-    X = _extract_feature(X, feature)
+    # X = _extract_feature(X, feature)
 
     np.random.seed(seed)
     np.random.shuffle(X)
@@ -92,11 +92,10 @@ def load_data(rootpath="datasets/gtsrb_training", feature=None, cut_roi=True,
                 sp += 1
         plt.show()
 
-    X_train = X[:int(len(X)*(1-test_split))]
-    y_train = labels[:int(len(X)*(1-test_split))]
+    num_train = int(len(X) * (1 - test_split))
 
-    X_test = X[int(len(X)*(1-test_split)):]
-    y_test = labels[int(len(X)*(1-test_split)):]
+    X_train, y_train = X[:num_train], labels[:num_train]
+    X_test, y_test = X[num_train:], labels[num_train:]
 
     return (X_train, y_train), (X_test, y_test)
 
