@@ -40,7 +40,7 @@ from tensorflow.python.saved_model import builder as saved_model_builder
 from tensorflow.python.saved_model.signature_def_utils import predict_signature_def
 from tensorflow.python.saved_model import tag_constants
 tf.saved_model.save(model, "models/10/")
-builder = saved_model_builder.SavedModelBuilder("models/11/")
+builder = saved_model_builder.SavedModelBuilder("models/12/")
 signature = predict_signature_def(inputs={"images": model.input},
                                       outputs={"scores": model.output})
 with tf.keras.backend.get_session() as sess:
@@ -48,4 +48,7 @@ with tf.keras.backend.get_session() as sess:
     builder.add_meta_graph_and_variables(sess=sess, tags=[tag_constants.SERVING],
                                      signature_def_map={"predict": signature})
 builder.save()
-m = cv2.dnn.readNetFromTensorflow('models/11/saved_model.pbtxt','models/11/saved_model.pb')
+
+tf.train.write_graph(tf.keras.backend.get_session().graph_def, 'models/', 'graph.pb', as_text=False)
+m = cv2.dnn.readNetFromTensorflow('models/11/saved_model.pb')
+m = cv2.dnn.readNetFromTensorflow('models/graph.pb')
