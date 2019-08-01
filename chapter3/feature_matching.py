@@ -36,16 +36,14 @@ class FeatureMatching:
         of interest
         """
         # initialize SURF
-        # self.SURF = cv2.xfeatures2d.SURF_create(self.min_hessian)
+        # self.SURF = cv2.xfeatures2d.SURF_create(self.min_hessmin_hessian)
         # self.f_extractor = cv2.xfeatures2d.BRISK_create()
-        self.f_extractor = cv2.BRISK_create()
+        self.f_extractor = cv2.xfeatures2d_SURF.create(hessianThreshold=400)
 
         # template image: "train" image
         # later on compared ot each video frame: "query" image
         self.img_obj = cv2.imread(train_image, cv2.CV_8UC1)
-        if self.img_obj is None:
-            print("Could not find train image " + train_image)
-            raise SystemExit
+        assert self.img_obj is not None, f"Could not find train image {train_image}"
 
         self.sh_train = self.img_obj.shape[:2]
         self.key_train, self.desc_train = \
@@ -55,6 +53,7 @@ class FeatureMatching:
         FLANN_INDEX_KDTREE = 0
         index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
         search_params = dict(checks=50)
+        # self.flann = cv2.DescriptorMatcher_create(cv2.DescriptorMatcher_FLANNBASED)
         self.flann = cv2.FlannBasedMatcher(index_params, search_params)
 
         # initialize tracking
@@ -80,10 +79,11 @@ class FeatureMatching:
             :returns: (success, frame) whether the detection was successful and
                       and the perspective-transformed frame
         """
+
         # create a working copy (grayscale) of the frame
         # and store its shape for convenience
-        img_query = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        sh_query = img_query.shape[:2]  # rows,cols
+        img_query = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        sh_query = img_query.shape  # rows,cols
 
         # --- feature extraction
         # detect keypoints in the query image (video frame)
@@ -97,7 +97,7 @@ class FeatureMatching:
 
         # early outlier detection and rejection
         if len(good_matches) < 4:
-            self.num_frames_no_success = self.num_frames_no_success + 1
+            self.num_frames_no_success += 1
             return False, frame
 
         # --- corner point detection
@@ -108,8 +108,8 @@ class FeatureMatching:
         # early outlier detection and rejection
         # if any corners lie significantly outside the image, skip frame
         if np.any([x for x in dst_corners if x[0] < -20 or x[1] < -20 or
-                         x[0] > sh_query[1]+20 or x[1] > sh_query[0] + 20]):
-            self.num_frames_no_success = self.num_frames_no_success + 1
+                   x[0] > sh_query[1] + 20 or x[1] > sh_query[0] + 20]):
+            self.num_frames_no_success += 1
             return False, frame
 
         # early outlier detection and rejection
@@ -117,27 +117,30 @@ class FeatureMatching:
         area = 0
         for i in range(0, 4):
             next_i = (i + 1) % 4
-            area = area + (dst_corners[i][0]*dst_corners[next_i][1] -
-                           dst_corners[i][1]*dst_corners[next_i][0])/2.
+            area = area + (dst_corners[i][0] * dst_corners[next_i][1] -
+                           dst_corners[i][1] * dst_corners[next_i][0]) / 2.
 
         # early outlier detection and rejection
         # reject corner points if area is unreasonable
-        if area < np.prod(sh_query)/16. or area > np.prod(sh_query)/2.:
-            self.num_frames_no_success = self.num_frames_no_success + 1
+        if area < np.prod(sh_query) / 16. or area > np.prod(sh_query) / 2.:
+            self.num_frames_no_success += 1
             return False, frame
 
         # adjust x-coordinate (col) of corner points so that they can be drawn
         # next to the train image (add self.sh_train[1])
         dst_corners = [(np.int(dst_corners[i][0] + self.sh_train[1]),
-                       np.int(dst_corners[i][1]))
+                        np.int(dst_corners[i][1]))
                        for i in range(len(dst_corners))]
 
         # outline corner points of train image in query image
-        img_flann = draw_good_matches(self.img_obj, self.key_train, img_query,
-                                      key_query, good_matches)
-        for i in range(0, len(dst_corners)):
-            cv2.line(img_flann, dst_corners[i], dst_corners[(i + 1) % 4],
-                     (0, 255, 0), 3)
+        # img_flann = draw_good_matches(self.img_obj, self.key_train, img_query,
+        #                               key_query, good_matches)
+        # for i in range(0, len(dst_corners)):
+        #     cv2.line(img_flann, dst_corners[i], dst_corners[(i + 1) % 4],
+        #              (0, 255, 0), 3)
+        # img_flann = cv2.drawMatches(self.img_obj, self.key_train, img_query,
+        #                               key_query, good_matches,np.zeros((1000,1000,3)))
+        # return True, img_flann
 
         # --- bring object of interest to frontal plane
         [Hinv, dst_size] = self._warp_keypoints(good_matches, key_query,
@@ -182,11 +185,14 @@ class FeatureMatching:
             :returns: list of good matches
         """
         # find 2 best matches (kNN with k=2)
+        # print(self.desc_train.shape, desc_frame.shape,self.desc_train.dtype, desc_frame.dtype )
         matches = self.flann.knnMatch(self.desc_train, desc_frame, k=2)
 
         # discard bad matches, ratio test as per Lowe's paper
-        good_matches = [x for x in matches if x[0].distance < 0.7*x[1].distance]
-        good_matches = [good_matches[i][0] for i in range(len(good_matches))]
+        good_matches = [
+            x for x in matches if x[0].distance < 0.7 *
+            x[1].distance]
+        good_matches = [good_match[0] for good_match in good_matches]
 
         return good_matches
 
@@ -202,21 +208,26 @@ class FeatureMatching:
             :returns: coordinates of good matches in transformed query image
         """
         # find homography using RANSAC
-        src_points = [self.key_train[good_matches[i].queryIdx].pt
-                      for i in range(len(good_matches))]
-        dst_points = [key_frame[good_matches[i].trainIdx].pt
-                      for i in range(len(good_matches))]
+        src_points = [self.key_train[good_match.queryIdx].pt
+                      for good_match in good_matches]
+        dst_points = [key_frame[good_match.trainIdx].pt
+                      for good_match in good_matches]
         H, _ = cv2.findHomography(np.array(src_points), np.array(dst_points),
                                   cv2.RANSAC)
 
         # outline train image in query image
-        src_corners = np.array([(0, 0), (self.sh_train[1], 0),
-                                (self.sh_train[1], self.sh_train[0]),
-                                (0, self.sh_train[0])], dtype=np.float32)
-        dst_corners = cv2.perspectiveTransform(src_corners[None, :, :], H)
+        height, width = self.sh_train
+        src_corners = np.array([(0, 0), (width, 0),
+                                (width, height),
+                                (0, height)], dtype=np.float32)
+        # print(src_corners)
+        # print(src_corners,H,src_points,dst_points)
+        dst_corners = cv2.perspectiveTransform(src_corners[None, :, :], H)[0]
 
         # convert to tuple
-        dst_corners = list(map(tuple, dst_corners[0]))
+        print("1", dst_corners)
+        dst_corners = list(map(tuple, dst_corners))
+        print("2", dst_corners)
         return dst_corners
 
     def _warp_keypoints(self, good_matches, key_frame, sh_frame):
@@ -233,10 +244,10 @@ class FeatureMatching:
         """
         # bring object to frontoparallel plane: centered, up-right
         dst_size = (sh_frame[1], sh_frame[0])  # cols,rows
-        scale_row = 1./self.sh_train[0]*dst_size[1]/2.
-        bias_row = dst_size[0]/4.
-        scale_col = 1./self.sh_train[1]*dst_size[0]*3/4.
-        bias_col = dst_size[1]/8.
+        scale_row = 1. / self.sh_train[0] * dst_size[1] / 2.
+        bias_row = dst_size[0] / 4.
+        scale_col = 1. / self.sh_train[1] * dst_size[0] * 3 / 4.
+        bias_col = dst_size[1] / 8.
 
         # source points are the ones in the train image
         src_points = [key_frame[good_matches[i].trainIdx].pt
@@ -246,7 +257,7 @@ class FeatureMatching:
         # off-set in space so that the image is centered
         dst_points = [self.key_train[good_matches[i].queryIdx].pt
                       for i in range(len(good_matches))]
-        dst_points = [[x*scale_row+bias_row, y*scale_col+bias_col]
+        dst_points = [[x * scale_row + bias_row, y * scale_col + bias_col]
                       for x, y in dst_points]
 
         # find homography
@@ -278,13 +289,13 @@ def draw_good_matches(img1, kp1, img2, kp2, matches):
     rows1, cols1 = img1.shape[:2]
     rows2, cols2 = img2.shape[:2]
 
-    out = np.zeros((max([rows1, rows2]), cols1+cols2, 3), dtype='uint8')
+    out = np.zeros((max([rows1, rows2]), cols1 + cols2, 3), dtype='uint8')
 
     # Place the first image to the left, copy 3x to make it RGB
     out[:rows1, :cols1, :] = np.dstack([img1, img1, img1])
 
     # Place the next image to the right of it, copy 3x to make it RGB
-    out[:rows2, cols1:cols1+cols2, :] = np.dstack([img2, img2, img2])
+    out[:rows2, cols1:cols1 + cols2, :] = np.dstack([img2, img2, img2])
 
     radius = 4
     BLUE = (255, 0, 0)
@@ -303,12 +314,12 @@ def draw_good_matches(img1, kp1, img2, kp2, matches):
         # colour blue
         # thickness = 1
         cv2.circle(out, (int(c1), int(r1)), radius, BLUE, thickness)
-        cv2.circle(out, (int(c2)+cols1, int(r2)), radius, BLUE, thickness)
+        cv2.circle(out, (int(c2) + cols1, int(r2)), radius, BLUE, thickness)
 
         # Draw a line in between the two points
         # thickness = 1
         # colour blue
-        cv2.line(out, (int(c1), int(r1)), (int(c2)+cols1, int(r2)), BLUE,
+        cv2.line(out, (int(c1), int(r1)), (int(c2) + cols1, int(r2)), BLUE,
                  thickness)
 
     return out

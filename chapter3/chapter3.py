@@ -24,22 +24,23 @@ class FeatureMatchingLayout(BaseLayout):
         object of interest can be tracked.
     """
 
-    def _init_custom_layout(self):
+    def augment_layout(self):
         """Initializes feature matching class"""
         self.matching = FeatureMatching(train_image='salinger.jpg')
-
-    def _create_custom_layout(self):
-        """Use plain layout"""
-        pass
-
+        self.to_show = None
     def process_frame(self, frame):
         """Processes each captured frame"""
         # if object detected, display new frame, else old one
         success, new_frame = self.matching.match(frame)
         if success:
-            return new_frame
+            self.to_show = new_frame
+        # return new_frame
+        if self.to_show is not None:
+            return self.to_show
         else:
             return frame
+        return self.to_show or frame
+        return new_frame if success else frame
 
 
 def main():
@@ -47,12 +48,8 @@ def main():
     if not(capture.isOpened()):
         capture.open()
 
-    if hasattr(cv2, 'cv'):
-        capture.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 640)
-        capture.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, 480)
-    else:
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     # start graphical user interface
     app = wx.App()
