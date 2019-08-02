@@ -43,7 +43,7 @@ class FeatureMatchingLayout(BaseLayout):
         return new_frame if success else frame
 
 
-def main():
+def mainold():
     capture = cv2.VideoCapture(0)
     if not(capture.isOpened()):
         capture.open()
@@ -56,6 +56,23 @@ def main():
     layout = FeatureMatchingLayout(capture, title='Feature Matching')
     layout.Show(True)
     app.MainLoop()
+
+def main():
+    capture = cv2.VideoCapture(0)
+    if not(capture.isOpened()):
+        capture.open()
+
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    matching = FeatureMatching(train_image='salinger.jpg')
+    success,frame = capture.read()
+    while success:
+        suc,new_frame = matching.match(frame)
+        cv2.imshow("frame",frame)
+        if suc:
+            cv2.imshow("res", new_frame)
+        k = cv2.waitKey(1) & 0xff
+        success,frame = capture.read()
 
 
 if __name__ == '__main__':

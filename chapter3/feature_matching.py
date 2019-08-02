@@ -96,7 +96,7 @@ class FeatureMatching:
         good_matches = self._match_features(desc_query)
 
         # early outlier detection and rejection
-        if len(good_matches) < 4:
+        if len(good_matches) < 30:
             self.num_frames_no_success += 1
             return False, frame
 
@@ -115,10 +115,12 @@ class FeatureMatching:
         # early outlier detection and rejection
         # find the area of the quadrilateral that the four corner points spans
         area = 0
-        for i in range(0, 4):
-            next_i = (i + 1) % 4
-            area = area + (dst_corners[i][0] * dst_corners[next_i][1] -
-                           dst_corners[i][1] * dst_corners[next_i][0]) / 2.
+        # for i in range(0, 4):
+        #     next_i = (i + 1) % 4
+        #     area = area + (dst_corners[i][0] * dst_corners[next_i][1] -
+        #                    dst_corners[i][1] * dst_corners[next_i][0]) / 2.
+        for (y,x),(nxt_y,nxt_x) in zip(dst_corners,dst_corners[1:]+dst_corners[:1]):
+            area += (y * nxt_x - x * nxt_y) / 2.
 
         # early outlier detection and rejection
         # reject corner points if area is unreasonable
@@ -128,19 +130,17 @@ class FeatureMatching:
 
         # adjust x-coordinate (col) of corner points so that they can be drawn
         # next to the train image (add self.sh_train[1])
-        dst_corners = [(np.int(dst_corners[i][0] + self.sh_train[1]),
-                        np.int(dst_corners[i][1]))
-                       for i in range(len(dst_corners))]
+        dst_corners = [(np.int(y + self.sh_train[1]),np.int(x)) for (y,x) in dst_corners]
 
         # outline corner points of train image in query image
-        # img_flann = draw_good_matches(self.img_obj, self.key_train, img_query,
-        #                               key_query, good_matches)
-        # for i in range(0, len(dst_corners)):
-        #     cv2.line(img_flann, dst_corners[i], dst_corners[(i + 1) % 4],
-        #              (0, 255, 0), 3)
+        img_flann = draw_good_matches(self.img_obj, self.key_train, img_query,
+                                      key_query, good_matches)
+        for i in range(0, len(dst_corners)):
+            cv2.line(img_flann, dst_corners[i], dst_corners[(i + 1) % 4],
+                     (0, 255, 0), 3)
         # img_flann = cv2.drawMatches(self.img_obj, self.key_train, img_query,
         #                               key_query, good_matches,np.zeros((1000,1000,3)))
-        # return True, img_flann
+        return True, img_flann
 
         # --- bring object of interest to frontal plane
         [Hinv, dst_size] = self._warp_keypoints(good_matches, key_query,
@@ -152,7 +152,7 @@ class FeatureMatching:
         recent = self.num_frames_no_success < self.max_frames_no_success
         similar = np.linalg.norm(Hinv - self.last_hinv) < self.max_error_hinv
         if recent and not similar:
-            self.num_frames_no_success = self.num_frames_no_success + 1
+            self.num_frames_no_success += 1
             return False, frame
 
         # reset counters and update Hinv
@@ -214,14 +214,17 @@ class FeatureMatching:
                       for good_match in good_matches]
         H, _ = cv2.findHomography(np.array(src_points), np.array(dst_points),
                                   cv2.RANSAC)
-
+        print("suc",_)
+        H, _ = cv2.findHomography(np.array(src_points), np.array(dst_points),
+                                  cv2.RANSAC)
         # outline train image in query image
         height, width = self.sh_train
         src_corners = np.array([(0, 0), (width, 0),
                                 (width, height),
                                 (0, height)], dtype=np.float32)
         # print(src_corners)
-        # print(src_corners,H,src_points,dst_points)
+        print(src_corners,H,src_points,dst_points)
+        print(len(src_corners),len(dst_points))
         dst_corners = cv2.perspectiveTransform(src_corners[None, :, :], H)[0]
 
         # convert to tuple
@@ -292,7 +295,7 @@ def draw_good_matches(img1, kp1, img2, kp2, matches):
     out = np.zeros((max([rows1, rows2]), cols1 + cols2, 3), dtype='uint8')
 
     # Place the first image to the left, copy 3x to make it RGB
-    out[:rows1, :cols1, :] = np.dstack([img1, img1, img1])
+    out[:rows1, :cols1, :] = np.dstack((img1, img1, img1))
 
     # Place the next image to the right of it, copy 3x to make it RGB
     out[:rows2, cols1:cols1 + cols2, :] = np.dstack([img2, img2, img2])
@@ -310,15 +313,10 @@ def draw_good_matches(img1, kp1, img2, kp2, matches):
         c2, r2 = kp2[m.trainIdx].pt
 
         # Draw a small circle at both co-ordinates
-        # radius 4
-        # colour blue
-        # thickness = 1
         cv2.circle(out, (int(c1), int(r1)), radius, BLUE, thickness)
         cv2.circle(out, (int(c2) + cols1, int(r2)), radius, BLUE, thickness)
 
         # Draw a line in between the two points
-        # thickness = 1
-        # colour blue
         cv2.line(out, (int(c1), int(r1)), (int(c2) + cols1, int(r2)), BLUE,
                  thickness)
 
