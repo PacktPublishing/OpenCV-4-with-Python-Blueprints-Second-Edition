@@ -52,7 +52,7 @@ tracker.init(frame, bbox)
 
 while True:
     ok, frame = video.read()
-    break if not ok
+    if not ok: break
     # Time in seconds
     start_time = time.time()
 
