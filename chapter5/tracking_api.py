@@ -50,16 +50,14 @@ bbox = cv2.selectROI(frame, False)
 tracker = trackers[tracker_name]()
 tracker.init(frame, bbox)
 
-while True:
-    ok, frame = video.read()
-    if not ok: break
+for ok, frame in iter(video.read, (False, None)):
     # Time in seconds
     start_time = time.time()
 
     # Update tracker
     ok, bbox = tracker.update(frame)
 
-    # Calcurlate FPS
+    # Calculate FPS
     fps = 1 / (time.time() - start_time)
 
     # Display tracking info and show frame
