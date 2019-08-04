@@ -9,6 +9,8 @@ import cv2
 __author__ = "Michael Beyeler"
 __license__ = "GNU GPL 3.0 or later"
 
+class Outlier(Exception):
+    pass
 
 class FeatureMatching:
     """Feature matching class
@@ -88,89 +90,78 @@ class FeatureMatching:
         # --- feature extraction
         # detect keypoints in the query image (video frame)
         # using SURF descriptor
-        key_query, desc_query = self._extract_features(img_query)
-
+        # key_query, desc_query = self._extract_features(img_query)
+        key_query, desc_query = self.f_extractor.detectAndCompute(img_query, None)
         # --- feature matching
         # returns a list of good matches using FLANN
         # based on a scene and its feature descriptor
         good_matches = self._match_features(desc_query)
 
-        # early outlier detection and rejection
-        if len(good_matches) < 30:
+        try:
+            # early outlier detection and rejection
+            if len(good_matches) < 4: raise Outlier()
+
+
+            # --- corner point detection
+            # calculates the homography matrix needed to convert between
+            # keypoints from the train image and the query image
+            dst_corners = self._detect_corner_points(key_query, good_matches)
+            print(0)
+            # early outlier detection and rejection
+            # if any corners lie significantly outside the image, skip frame
+            if np.any((dst_corners < -20) | (dst_corners > sh_query)):
+                raise Outlier()
+            print(1)
+            # early outlier detection and rejection
+            # find the area of the quadrilateral that the four corner points spans
+            area = 0
+            for (y,x),(nxt_y,nxt_x) in zip(dst_corners,np.roll(dst_corners,-1,axis=0)):
+                area += (y * nxt_x - x * nxt_y) / 2.
+
+            # early outlier detection and rejection
+            # reject corner points if area is unreasonable
+            if not np.prod(sh_query) / 16. < area <  np.prod(sh_query) / 2.:
+                raise Outlier()
+            print(2)
+            # outline corner points of train image in query image
+            img_flann = draw_good_matches(self.img_obj, self.key_train, img_query,
+                                          key_query, good_matches)
+            # for i in range(0, len(dst_corners)):
+            #     cv2.line(img_flann, dst_corners[i], dst_corners[(i + 1) % 4],
+            #              (0, 255, 0), 3)
+            print(dst_corners)
+            # adjust x-coordinate (col) of corner points so that they can be drawn
+            # next to the train image (add self.sh_train[1])
+            # dst_corners = [(np.int(y + self.sh_train[1]),np.int(x)) for (y,x) in dst_corners]
+            # dst_corners
+            dst_corners[:,0] += self.sh_train[1]
+            dst_corners = dst_corners.astype(np.int)
+            cv2.polylines(img_flann, [dst_corners], isClosed=True, color=(0, 255, 0), thickness=3)
+            # img_flann = cv2.drawMatches(self.img_obj, self.key_train, img_query,
+            #                               key_query, good_matches,np.zeros((1000,1000,3)))
+
+            # --- bring object of interest to frontal plane
+            Hinv, dst_size = self._warp_keypoints(good_matches, key_query,
+                                                    sh_query)
+
+            # outlier rejection
+            # if last frame recent: new Hinv must be similar to last one
+            # else: accept whatever Hinv is found at this point
+            recent = self.num_frames_no_success < self.max_frames_no_success
+            similar = np.linalg.norm(Hinv - self.last_hinv) < self.max_error_hinv
+            if recent and not similar: raise Outlier()
+
+            img_out = cv2.warpPerspective(img_query, Hinv, dst_size)
+            # img_out = cv2.cvtColor(img_out, cv2.COLOR_GRAY2RGB)
+        except Outlier:
+            print("Outlier")
             self.num_frames_no_success += 1
-            return False, frame
-
-        # --- corner point detection
-        # calculates the homography matrix needed to convert between
-        # keypoints from the train image and the query image
-        dst_corners = self._detect_corner_points(key_query, good_matches)
-
-        # early outlier detection and rejection
-        # if any corners lie significantly outside the image, skip frame
-        if np.any([x for x in dst_corners if x[0] < -20 or x[1] < -20 or
-                   x[0] > sh_query[1] + 20 or x[1] > sh_query[0] + 20]):
-            self.num_frames_no_success += 1
-            return False, frame
-
-        # early outlier detection and rejection
-        # find the area of the quadrilateral that the four corner points spans
-        area = 0
-        # for i in range(0, 4):
-        #     next_i = (i + 1) % 4
-        #     area = area + (dst_corners[i][0] * dst_corners[next_i][1] -
-        #                    dst_corners[i][1] * dst_corners[next_i][0]) / 2.
-        for (y,x),(nxt_y,nxt_x) in zip(dst_corners,dst_corners[1:]+dst_corners[:1]):
-            area += (y * nxt_x - x * nxt_y) / 2.
-
-        # early outlier detection and rejection
-        # reject corner points if area is unreasonable
-        if area < np.prod(sh_query) / 16. or area > np.prod(sh_query) / 2.:
-            self.num_frames_no_success += 1
-            return False, frame
-
-        # adjust x-coordinate (col) of corner points so that they can be drawn
-        # next to the train image (add self.sh_train[1])
-        dst_corners = [(np.int(y + self.sh_train[1]),np.int(x)) for (y,x) in dst_corners]
-
-        # outline corner points of train image in query image
-        img_flann = draw_good_matches(self.img_obj, self.key_train, img_query,
-                                      key_query, good_matches)
-        for i in range(0, len(dst_corners)):
-            cv2.line(img_flann, dst_corners[i], dst_corners[(i + 1) % 4],
-                     (0, 255, 0), 3)
-        # img_flann = cv2.drawMatches(self.img_obj, self.key_train, img_query,
-        #                               key_query, good_matches,np.zeros((1000,1000,3)))
-        return True, img_flann
-
-        # --- bring object of interest to frontal plane
-        [Hinv, dst_size] = self._warp_keypoints(good_matches, key_query,
-                                                sh_query)
-
-        # outlier rejection
-        # if last frame recent: new Hinv must be similar to last one
-        # else: accept whatever Hinv is found at this point
-        recent = self.num_frames_no_success < self.max_frames_no_success
-        similar = np.linalg.norm(Hinv - self.last_hinv) < self.max_error_hinv
-        if recent and not similar:
-            self.num_frames_no_success += 1
-            return False, frame
-
-        # reset counters and update Hinv
-        self.num_frames_no_success = 0
-        self.last_h = Hinv
-
-        img_out = cv2.warpPerspective(img_query, Hinv, dst_size)
-        img_out = cv2.cvtColor(img_out, cv2.COLOR_GRAY2RGB)
-
-        return True, img_out
-
-    def _extract_features(self, frame):
-        """Detects keypoints using the SURF descriptor
-
-            :param frame: the input image
-            :returns: (keypoints, descriptor)
-        """
-        return self.f_extractor.detectAndCompute(frame, None)
+            return False, None,None
+        else:
+            # reset counters and update Hinv
+            self.num_frames_no_success = 0
+            self.last_h = Hinv
+            return True, img_out,img_flann
 
     def _match_features(self, desc_frame):
         """Feature matching between train and query image
@@ -185,14 +176,12 @@ class FeatureMatching:
             :returns: list of good matches
         """
         # find 2 best matches (kNN with k=2)
-        # print(self.desc_train.shape, desc_frame.shape,self.desc_train.dtype, desc_frame.dtype )
         matches = self.flann.knnMatch(self.desc_train, desc_frame, k=2)
 
         # discard bad matches, ratio test as per Lowe's paper
         good_matches = [
-            x for x in matches if x[0].distance < 0.7 *
+            x[0] for x in matches if x[0].distance < 0.7 *
             x[1].distance]
-        good_matches = [good_match[0] for good_match in good_matches]
 
         return good_matches
 
@@ -214,24 +203,15 @@ class FeatureMatching:
                       for good_match in good_matches]
         H, _ = cv2.findHomography(np.array(src_points), np.array(dst_points),
                                   cv2.RANSAC)
-        print("suc",_)
-        H, _ = cv2.findHomography(np.array(src_points), np.array(dst_points),
-                                  cv2.RANSAC)
+
+        if H is None: raise Outlier()
         # outline train image in query image
         height, width = self.sh_train
         src_corners = np.array([(0, 0), (width, 0),
                                 (width, height),
                                 (0, height)], dtype=np.float32)
-        # print(src_corners)
-        print(src_corners,H,src_points,dst_points)
-        print(len(src_corners),len(dst_points))
-        dst_corners = cv2.perspectiveTransform(src_corners[None, :, :], H)[0]
 
-        # convert to tuple
-        print("1", dst_corners)
-        dst_corners = list(map(tuple, dst_corners))
-        print("2", dst_corners)
-        return dst_corners
+        return cv2.perspectiveTransform(src_corners[None, :, :], H)[0]
 
     def _warp_keypoints(self, good_matches, key_frame, sh_frame):
         """Projects keypoints to the frontal plane

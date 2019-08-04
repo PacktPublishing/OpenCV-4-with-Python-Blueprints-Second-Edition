@@ -59,20 +59,21 @@ def mainold():
 
 def main():
     capture = cv2.VideoCapture(0)
-    if not(capture.isOpened()):
-        capture.open()
+    assert capture.isOpened(), "Cannot connect to camera"
 
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     matching = FeatureMatching(train_image='salinger.jpg')
-    success,frame = capture.read()
-    while success:
-        suc,new_frame = matching.match(frame)
+
+    for success,frame in iter(capture.read,(False,None)):
         cv2.imshow("frame",frame)
+
+        suc,img_out, img_flann = matching.match(frame)
+
         if suc:
-            cv2.imshow("res", new_frame)
+            cv2.imshow("res", img_out)
+            cv2.imshow("flann", img_flann)
         k = cv2.waitKey(1) & 0xff
-        success,frame = capture.read()
 
 
 if __name__ == '__main__':
