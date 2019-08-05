@@ -28,6 +28,7 @@ class FeatureMatchingLayout(BaseLayout):
         """Initializes feature matching class"""
         self.matching = FeatureMatching(train_image='salinger.jpg')
         self.to_show = None
+
     def process_frame(self, frame):
         """Processes each captured frame"""
         # if object detected, display new frame, else old one
@@ -43,37 +44,25 @@ class FeatureMatchingLayout(BaseLayout):
         return new_frame if success else frame
 
 
-def mainold():
-    capture = cv2.VideoCapture(0)
-    if not(capture.isOpened()):
-        capture.open()
-
-    capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-
-    # start graphical user interface
-    app = wx.App()
-    layout = FeatureMatchingLayout(capture, title='Feature Matching')
-    layout.Show(True)
-    app.MainLoop()
-
 def main():
     capture = cv2.VideoCapture(0)
     assert capture.isOpened(), "Cannot connect to camera"
 
+    capture.set(cv2.CAP_PROP_FPS, 5)
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     matching = FeatureMatching(train_image='salinger.jpg')
 
-    for success,frame in iter(capture.read,(False,None)):
-        cv2.imshow("frame",frame)
+    for success, frame in iter(capture.read, (False, None)):
+        cv2.imshow("frame", frame)
 
-        suc,img_out, img_flann = matching.match(frame)
+        match_succsess, img_warped, img_flann = matching.match(frame)
 
-        if suc:
-            cv2.imshow("res", img_out)
+        if match_succsess:
+            cv2.imshow("res", img_warped)
             cv2.imshow("flann", img_flann)
-        k = cv2.waitKey(1) & 0xff
+        if cv2.waitKey(1) & 0xff == 27:
+            break
 
 
 if __name__ == '__main__':
