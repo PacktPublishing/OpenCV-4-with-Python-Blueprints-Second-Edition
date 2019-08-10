@@ -4,11 +4,13 @@
 """A module containing an algorithm for feature matching"""
 
 import numpy as np
-import cv2 as cv
+import cv2
 from typing import Tuple, Optional, List, Sequence
 
 __author__ = "Michael Beyeler"
 __license__ = "GNU GPL 3.0 or later"
+
+cv2.cornerHarris
 
 
 class Outlier(Exception):
@@ -41,10 +43,10 @@ class FeatureMatching:
         of interest
         """
         # initialize SURF
-        self.f_extractor = cv.xfeatures2d_SURF.create(hessianThreshold=400)
+        self.f_extractor = cv2.xfeatures2d_SURF.create(hessianThreshold=400)
         # template image: "train" image
         # later on compared ot each video frame: "query" image
-        self.img_obj = cv.imread(train_image, cv.CV_8UC1)
+        self.img_obj = cv2.imread(train_image, cv2.CV_8UC1)
         assert self.img_obj is not None, f"Could not find train image {train_image}"
 
         self.sh_train = self.img_obj.shape[:2]
@@ -55,14 +57,13 @@ class FeatureMatching:
         FLANN_INDEX_KDTREE = 0
         index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
         search_params = dict(checks=50)
-        # self.flann = cv.DescriptorMatcher_create(cv.DescriptorMatcher_FLANNBASED)
-        self.flann = cv.FlannBasedMatcher(index_params, search_params)
-
+        self.flann = cv2.FlannBasedMatcher(index_params, search_params)
+        # self.flann = cv2.DescriptorMatcher_create(cv2.DescriptorMatcher_FLANNBASED)
         # initialize tracking
         self.last_hinv = np.zeros((3, 3))
+        self.max_error_hinv = 50.
         self.num_frames_no_success = 0
         self.max_frames_no_success = 5
-        self.max_error_hinv = 50.
 
     def match(self,
               frame: np.ndarray) -> Tuple[bool,
@@ -87,7 +88,7 @@ class FeatureMatching:
 
         # create a working copy (grayscale) of the frame
         # and store its shape for convenience
-        img_query = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        img_query = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         sh_query = img_query.shape  # rows,cols
 
         # --- feature extraction
@@ -95,6 +96,9 @@ class FeatureMatching:
         # using SURF descriptor
         key_query, desc_query = self.f_extractor.detectAndCompute(
             img_query, None)
+        # img_keypoints = cv2.drawKeypoints(img_query, key_query, None,
+        #      (255, 0, 0), 4)
+        # cv2.imshow("keypoints",img_keypoints)
         # --- feature matching
         # returns a list of good matches using FLANN
         # based on a scene and its feature descriptor
@@ -103,7 +107,7 @@ class FeatureMatching:
         try:
             # early outlier detection and rejection
             if len(good_matches) < 4:
-                raise Outlier()
+                raise Outlier("Too few matches")
 
             # --- corner point detection
             # calculates the homography matrix needed to convert between
@@ -112,7 +116,7 @@ class FeatureMatching:
             # early outlier detection and rejection
             # if any corners lie significantly outside the image, skip frame
             if np.any((dst_corners < -20) | (dst_corners > sh_query)):
-                raise Outlier()
+                raise Outlier("Out of image")
             # early outlier detection and rejection
             # find the area of the quadrilateral that the four corner points
             # spans
@@ -124,7 +128,7 @@ class FeatureMatching:
             # early outlier detection and rejection
             # reject corner points if area is unreasonable
             if not np.prod(sh_query) / 16. < area < np.prod(sh_query) / 2.:
-                raise Outlier()
+                raise Outlier("Area is unreasonably small or large")
             # outline corner points of train image in query image
             img_flann = draw_good_matches(
                 self.img_obj,
@@ -135,7 +139,7 @@ class FeatureMatching:
             # adjust x-coordinate (col) of corner points so that they can be drawn
             # next to the train image (add self.sh_train[1])
             dst_corners[:, 0] += self.sh_train[1]
-            cv.polylines(
+            cv2.polylines(
                 img_flann,
                 [dst_corners.astype(np.int)],
                 isClosed=True,
@@ -156,19 +160,19 @@ class FeatureMatching:
             similar = np.linalg.norm(
                 Hinv - self.last_hinv) < self.max_error_hinv
             if recent and not similar:
-                raise Outlier()
-
-            img_warped = cv.warpPerspective(img_query, Hinv, dst_size)
-        except Outlier:
+                raise Outlier("Not similar transformation")
+        except Outlier as e:
+            print(f"Outlier:{e}")
             self.num_frames_no_success += 1
             return False, None, None
         else:
             # reset counters and update Hinv
             self.num_frames_no_success = 0
             self.last_h = Hinv
+            img_warped = cv2.warpPerspective(img_query, Hinv, dst_size)
             return True, img_warped, img_flann
 
-    def _match_features(self, desc_frame: np.ndarray) -> List[cv.DMatch]:
+    def _match_features(self, desc_frame: np.ndarray) -> List[cv2.DMatch]:
         """Feature matching between train and query image
 
             This method finds matches between the descriptor of an input
@@ -183,14 +187,13 @@ class FeatureMatching:
         # find 2 best matches (kNN with k=2)
         matches = self.flann.knnMatch(self.desc_train, desc_frame, k=2)
         # discard bad matches, ratio test as per Lowe's paper
-        good_matches = [
-            x[0] for x in matches if x[0].distance < 0.7 *
-            x[1].distance]
+        good_matches = [x[0] for x in matches
+                        if x[0].distance < 0.7 * x[1].distance]
         return good_matches
 
     def _detect_corner_points(self,
                               key_frame: np.ndarray,
-                              good_matches: Sequence[cv.DMatch]) -> np.ndarray:
+                              good_matches: Sequence[cv2.DMatch]) -> np.ndarray:
         """Detects corner points in an input (query) image
 
             This method finds the homography matrix to go from the template
@@ -206,21 +209,21 @@ class FeatureMatching:
                       for good_match in good_matches]
         dst_points = [key_frame[good_match.trainIdx].pt
                       for good_match in good_matches]
-        H, _ = cv.findHomography(np.array(src_points), np.array(dst_points),
-                                 cv.RANSAC)
+        H, _ = cv2.findHomography(np.array(src_points), np.array(dst_points),
+                                  cv2.RANSAC)
 
         if H is None:
-            raise Outlier()
+            raise Outlier("Homography not found")
         # outline train image in query image
         height, width = self.sh_train
         src_corners = np.array([(0, 0), (width, 0),
                                 (width, height),
                                 (0, height)], dtype=np.float32)
-        return cv.perspectiveTransform(src_corners[None, :, :], H)[0]
+        return cv2.perspectiveTransform(src_corners[None, :, :], H)[0]
 
     def _warp_keypoints(self,
-                        good_matches: Sequence[cv.DMatch],
-                        key_frame: Sequence[cv.KeyPoint],
+                        good_matches: Sequence[cv2.DMatch],
+                        key_frame: Sequence[cv2.KeyPoint],
                         sh_frame: Tuple[int,
                                         int]) -> Tuple[np.ndarray,
                                                        Tuple[int,
@@ -255,16 +258,16 @@ class FeatureMatching:
                       for y, x in dst_points]
 
         # find homography
-        Hinv, _ = cv.findHomography(np.array(src_points),
-                                    np.array(dst_points), cv.RANSAC)
+        Hinv, _ = cv2.findHomography(np.array(src_points),
+                                     np.array(dst_points), cv2.RANSAC)
         return Hinv, dst_size
 
 
 def draw_good_matches(img1: np.ndarray,
-                      kp1: Sequence[cv.KeyPoint],
+                      kp1: Sequence[cv2.KeyPoint],
                       img2: np.ndarray,
-                      kp2: Sequence[cv.KeyPoint],
-                      matches: Sequence[cv.DMatch]) -> np.ndarray:
+                      kp2: Sequence[cv2.KeyPoint],
+                      matches: Sequence[cv2.DMatch]) -> np.ndarray:
     """Visualizes a list of good matches
 
         This function visualizes a list of good matches. It is only required in
@@ -302,16 +305,20 @@ def draw_good_matches(img1: np.ndarray,
     # draw circles, then connect a line between them
     for m in matches:
         # Get the matching keypoints for each of the images
+        # and convert them to int
+        c1 = tuple(map(int, kp1[m.queryIdx].pt))
+        c2 = tuple(map(int, kp2[m.trainIdx].pt))
+        # Shift second center for drawing
+        c2 = c2[0] + cols1, c2[1]
 
-        c1, r1 = kp1[m.queryIdx].pt
-        c2, r2 = kp2[m.trainIdx].pt
-
+        radius = 4
+        BLUE = (255, 0, 0)
+        thickness = 1
         # Draw a small circle at both co-ordinates
-        cv.circle(out, (int(c1), int(r1)), radius, BLUE, thickness)
-        cv.circle(out, (int(c2) + cols1, int(r2)), radius, BLUE, thickness)
+        cv2.circle(out, c1, radius, BLUE, thickness)
+        cv2.circle(out, c2, radius, BLUE, thickness)
 
         # Draw a line in between the two points
-        cv.line(out, (int(c1), int(r1)), (int(c2) + cols1, int(r2)), BLUE,
-                thickness)
+        cv2.line(out, c1, c2, BLUE, thickness)
 
     return out
