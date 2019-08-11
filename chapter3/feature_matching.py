@@ -6,6 +6,7 @@
 import numpy as np
 import cv2
 from typing import Tuple, Optional, List, Sequence
+Point = Tuple[float, float]
 
 __author__ = "Michael Beyeler"
 __license__ = "GNU GPL 3.0 or later"
@@ -102,7 +103,11 @@ class FeatureMatching:
         # --- feature matching
         # returns a list of good matches using FLANN
         # based on a scene and its feature descriptor
-        good_matches = self._match_features(desc_query)
+        good_matches = self.match_features(desc_query)
+        train_points = [self.key_train[good_match.queryIdx].pt
+                        for good_match in good_matches]
+        query_points = [key_query[good_match.trainIdx].pt
+                        for good_match in good_matches]
 
         try:
             # early outlier detection and rejection
@@ -112,10 +117,11 @@ class FeatureMatching:
             # --- corner point detection
             # calculates the homography matrix needed to convert between
             # keypoints from the train image and the query image
-            dst_corners = self._detect_corner_points(key_query, good_matches)
+            dst_corners = detect_corner_points(
+                train_points, query_points, self.sh_train)
             # early outlier detection and rejection
             # if any corners lie significantly outside the image, skip frame
-            if np.any((dst_corners < -20) | (dst_corners > sh_query)):
+            if np.any((dst_corners < -20) | (dst_corners > np.array(sh_query) + 20)):
                 raise Outlier("Out of image")
             # early outlier detection and rejection
             # find the area of the quadrilateral that the four corner points
@@ -129,7 +135,32 @@ class FeatureMatching:
             # reject corner points if area is unreasonable
             if not np.prod(sh_query) / 16. < area < np.prod(sh_query) / 2.:
                 raise Outlier("Area is unreasonably small or large")
+
+
+            # --- bring object of interest to frontal plane
+            train_points_scaled = self.scale_and_offset(
+                train_points, self.sh_train, sh_query)
+            Hinv, _ = cv2.findHomography(
+                np.array(query_points), np.array(train_points_scaled), cv2.RANSAC)
+            # outlier rejection
+            # if last frame recent: new Hinv must be similar to last one
+            # else: accept whatever Hinv is found at this point
+            similar = np.linalg.norm(
+                Hinv - self.last_hinv) < self.max_error_hinv
+            recent = self.num_frames_no_success < self.max_frames_no_success
+            if recent and not similar:
+                raise Outlier("Not similar transformation")
+        except Outlier as e:
+            print(f"Outlier:{e}")
+            self.num_frames_no_success += 1
+            return False, None, None
+        else:
+            # reset counters and update Hinv
+            self.num_frames_no_success = 0
+            self.last_h = Hinv
             # outline corner points of train image in query image
+            img_warped = cv2.warpPerspective(
+                img_query, Hinv, (sh_query[1], sh_query[0]))
             img_flann = draw_good_matches(
                 self.img_obj,
                 self.key_train,
@@ -143,36 +174,11 @@ class FeatureMatching:
                 img_flann,
                 [dst_corners.astype(np.int)],
                 isClosed=True,
-                color=(
-                    0,
-                    255,
-                    0),
+                color=(0,255,0),
                 thickness=3)
-
-            # --- bring object of interest to frontal plane
-            Hinv, dst_size = self._warp_keypoints(good_matches, key_query,
-                                                  sh_query)
-
-            # outlier rejection
-            # if last frame recent: new Hinv must be similar to last one
-            # else: accept whatever Hinv is found at this point
-            recent = self.num_frames_no_success < self.max_frames_no_success
-            similar = np.linalg.norm(
-                Hinv - self.last_hinv) < self.max_error_hinv
-            if recent and not similar:
-                raise Outlier("Not similar transformation")
-        except Outlier as e:
-            print(f"Outlier:{e}")
-            self.num_frames_no_success += 1
-            return False, None, None
-        else:
-            # reset counters and update Hinv
-            self.num_frames_no_success = 0
-            self.last_h = Hinv
-            img_warped = cv2.warpPerspective(img_query, Hinv, dst_size)
             return True, img_warped, img_flann
 
-    def _match_features(self, desc_frame: np.ndarray) -> List[cv2.DMatch]:
+    def match_features(self, desc_frame: np.ndarray) -> List[cv2.DMatch]:
         """Feature matching between train and query image
 
             This method finds matches between the descriptor of an input
@@ -191,76 +197,43 @@ class FeatureMatching:
                         if x[0].distance < 0.7 * x[1].distance]
         return good_matches
 
-    def _detect_corner_points(self,
-                              key_frame: np.ndarray,
-                              good_matches: Sequence[cv2.DMatch]) -> np.ndarray:
-        """Detects corner points in an input (query) image
+    @staticmethod
+    def scale_and_offset(points: Sequence[Point],
+                         source_size: Tuple[int, int],
+                         dst_size: Tuple[int, int],
+                         factor: float = 0.5) -> List[Point]:
+        dst_size = np.array(dst_size)
+        scale = 1 / np.array(source_size) * dst_size * factor
+        bias = dst_size * (1 - factor) / 2
+        return [tuple(np.array(pt) * scale + bias) for pt in points]
 
-            This method finds the homography matrix to go from the template
-            (train) image to the input (query) image, and finds the coordinates
-            of the good matches (from the train image) in the query image.
 
-            :param key_frame: keypoints of the query image
-            :param good_matches: list of good matches
-            :returns: coordinates of good matches in transformed query image
-        """
-        # find homography using RANSAC
-        src_points = [self.key_train[good_match.queryIdx].pt
-                      for good_match in good_matches]
-        dst_points = [key_frame[good_match.trainIdx].pt
-                      for good_match in good_matches]
-        H, _ = cv2.findHomography(np.array(src_points), np.array(dst_points),
-                                  cv2.RANSAC)
+def detect_corner_points(src_points: Sequence[Point],
+                         dst_points: Sequence[Point],
+                         sh_src: Tuple[int, int]) -> np.ndarray:
+    """Detects corner points in an input (query) image
 
-        if H is None:
-            raise Outlier("Homography not found")
-        # outline train image in query image
-        height, width = self.sh_train
-        src_corners = np.array([(0, 0), (width, 0),
-                                (width, height),
-                                (0, height)], dtype=np.float32)
-        return cv2.perspectiveTransform(src_corners[None, :, :], H)[0]
+        This method finds the homography matrix to go from the template
+        (train) image to the input (query) image, and finds the coordinates
+        of the good matches (from the train image) in the query image.
 
-    def _warp_keypoints(self,
-                        good_matches: Sequence[cv2.DMatch],
-                        key_frame: Sequence[cv2.KeyPoint],
-                        sh_frame: Tuple[int,
-                                        int]) -> Tuple[np.ndarray,
-                                                       Tuple[int,
-                                                             int]]:
-        """Projects keypoints to the frontal plane
+        :param key_frame: keypoints of the query image
+        :param good_matches: list of good matches
+        :returns: coordinates of good matches in transformed query image
+    """
 
-            This method computes the homography matrix that is required to
-            project a list of keypoints to the frontal plane.
+    # find homography using RANSAC
+    H, _ = cv2.findHomography(np.array(src_points), np.array(dst_points),
+                              cv2.RANSAC)
 
-            :param good_matches: list of good matches
-            :param key_frame: list of keypoints in the input (query) image
-            :param sh_frame: shape of the input (query) image
-            :returns: [Hinv, dst_size] homography matrix and size of resulting
-                      image
-        """
-        # bring object to frontoparallel plane: centered, up-right
-        dst_size = (sh_frame[1], sh_frame[0])  # cols,rows
-        scale_row = 1. / self.sh_train[0] * dst_size[1] / 2.
-        bias_row = dst_size[0] / 4.
-        scale_col = 1. / self.sh_train[1] * dst_size[0] * 3 / 4.
-        bias_col = dst_size[1] / 8.
-
-        # source points are the ones in the train image
-        src_points = [key_frame[good_match.trainIdx].pt
-                      for good_match in good_matches]
-
-        # destination points are the ones in the query image
-        # off-set in space so that the image is
-        dst_points = [self.key_train[good_match.queryIdx].pt
-                      for good_match in good_matches]
-        dst_points = [[y * scale_row + bias_row, x * scale_col + bias_col]
-                      for y, x in dst_points]
-
-        # find homography
-        Hinv, _ = cv2.findHomography(np.array(src_points),
-                                     np.array(dst_points), cv2.RANSAC)
-        return Hinv, dst_size
+    if H is None:
+        raise Outlier("Homography not found")
+    # outline train image in query image
+    height, width = sh_src
+    src_corners = np.array([(0, 0), (width, 0),
+                            (width, height),
+                            (0, height)], dtype=np.float32)
+    return cv2.perspectiveTransform(src_corners[None, :, :], H)[0]
 
 
 def draw_good_matches(img1: np.ndarray,
@@ -296,10 +269,6 @@ def draw_good_matches(img1: np.ndarray,
 
     # Place the next image to the right of it
     out[:rows2, cols1:cols1 + cols2, :] = img2[..., None]
-
-    radius = 4
-    BLUE = (255, 0, 0)
-    thickness = 1
 
     # For each pair of points we have between both images
     # draw circles, then connect a line between them
