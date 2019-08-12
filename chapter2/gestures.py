@@ -73,8 +73,8 @@ class HandGestureRecognition:
         """
         # find center (21x21 pixel) region of image frame
         center_half = 10  # half-width of 21 is 21/2-1
-        center = frame[self.height/2-center_half:self.height/2+center_half,
-                       self.width/2-center_half:self.width/2+center_half]
+        center = frame[self.height//2-center_half:self.height//2+center_half,
+                       self.width//2-center_half:self.width//2+center_half]
 
         # find median depth value of center region
         med_val = np.median(center)
@@ -89,12 +89,12 @@ class HandGestureRecognition:
 
         # connected component
         small_kernel = 3
-        frame[self.height/2-small_kernel:self.height/2+small_kernel,
-              self.width/2-small_kernel:self.width/2+small_kernel] = 128
+        frame[self.height//2-small_kernel:self.height//2+small_kernel,
+              self.width//2-small_kernel:self.width//2+small_kernel] = 128
 
         mask = np.zeros((self.height+2, self.width+2), np.uint8)
         flood = frame.copy()
-        cv2.floodFill(flood, mask, (self.width/2, self.height/2), 255,
+        cv2.floodFill(flood, mask, (self.width//2, self.height//2), 255,
                       flags=4 | (255 << 8))
 
         ret, flooded = cv2.threshold(flood, 129, 255, cv2.THRESH_BINARY)
