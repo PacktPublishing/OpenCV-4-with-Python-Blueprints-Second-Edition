@@ -29,13 +29,14 @@ class HandGestureRecognition:
             This method initializes all necessary parameters.
         """
         # maximum depth deviation for a pixel to be considered within range
-        self.abs_depth_dev = 14
+        # self.abs_depth_dev = 14
 
         # cut-off angle (deg): everything below this is a convexity point that
         # belongs to two extended fingers
-        self.thresh_deg = 80.0
+        # self.thresh_deg = 80.0
 
-    def recognize(self, img_gray):
+    # @staticmethod
+    def recognize(self,img_gray):
         """Recognizes hand gesture in a single-channel depth image
 
             This method estimates the number of extended fingers based on
@@ -44,7 +45,7 @@ class HandGestureRecognition:
             :returns: (num_fingers, img_draw) The estimated number of
                        extended fingers and an annotated RGB image
         """
-        self.height, self.width = img_gray.shape[:2]
+        height, width = img_gray.shape
 
         # segment arm region
         segment = self._segment_arm(img_gray)
@@ -61,7 +62,8 @@ class HandGestureRecognition:
 
         return (num_fingers, img_draw)
 
-    def _segment_arm(self, frame):
+    @staticmethod
+    def _segment_arm(frame, abs_depth_dev=14):
         """Segments arm region
 
             This method accepts a single-channel depth image of an arm and
@@ -71,16 +73,17 @@ class HandGestureRecognition:
             :returns: binary image (mask) of segmented arm region, where
                       arm=255, else=0
         """
-        # find center (21x21 pixel) region of image frame
+        height, width = frame.shape
+        # find center (21x21 pixel) region of imageheight frame
         center_half = 10  # half-width of 21 is 21/2-1
-        center = frame[self.height//2-center_half:self.height//2+center_half,
-                       self.width//2-center_half:self.width//2+center_half]
+        center = frame[height // 2 - center_half:height // 2 + center_half,
+                       width // 2 - center_half:width // 2 + center_half]
 
         # find median depth value of center region
         med_val = np.median(center)
 
         # try this instead:
-        frame = np.where(abs(frame-med_val) <= self.abs_depth_dev,
+        frame = np.where(abs(frame - med_val) <= abs_depth_dev,
                          128, 0).astype(np.uint8)
 
         # morphological
@@ -89,19 +92,19 @@ class HandGestureRecognition:
 
         # connected component
         small_kernel = 3
-        frame[self.height//2-small_kernel:self.height//2+small_kernel,
-              self.width//2-small_kernel:self.width//2+small_kernel] = 128
+        frame[height // 2 - small_kernel:height // 2 + small_kernel,
+              width // 2 - small_kernel:width // 2 + small_kernel] = 128
 
-        mask = np.zeros((self.height+2, self.width+2), np.uint8)
+        mask = np.zeros((height + 2, width + 2), np.uint8)
         flood = frame.copy()
-        cv2.floodFill(flood, mask, (self.width//2, self.height//2), 255,
+        cv2.floodFill(flood, mask, (width // 2, height // 2), 255,
                       flags=4 | (255 << 8))
 
         ret, flooded = cv2.threshold(flood, 129, 255, cv2.THRESH_BINARY)
 
         return flooded
-
-    def _find_hull_defects(self, segment):
+    @staticmethod
+    def _find_hull_defects(segment):
         """Find hull defects
 
             This method finds all defects in the hull of a segmented arm
@@ -116,7 +119,7 @@ class HandGestureRecognition:
 
         # find largest area contour
         max_contour = max(contours, key=cv2.contourArea)
-        epsilon = 0.01*cv2.arcLength(max_contour, True)
+        epsilon = 0.01 * cv2.arcLength(max_contour, True)
         max_contour = cv2.approxPolyDP(max_contour, epsilon, True)
 
         # find convexity hull and defects
@@ -124,8 +127,8 @@ class HandGestureRecognition:
         defects = cv2.convexityDefects(max_contour, hull)
 
         return (max_contour, defects)
-
-    def _detect_num_fingers(self, contours, defects, img_draw):
+    @staticmethod
+    def _detect_num_fingers(contours, defects, img_draw,thresh_deg=80.0):
         """Detects the number of extended fingers
 
             This method determines the number of extended fingers based on a
@@ -168,7 +171,7 @@ class HandGestureRecognition:
             # if angle is below a threshold, defect point belongs to two
             # extended fingers
             if angle_rad(np.subtract(start, far),
-                         np.subtract(end, far)) < deg2rad(self.thresh_deg):
+                         np.subtract(end, far)) < deg2rad(thresh_deg):
                 # increment number of fingers
                 num_fingers = num_fingers + 1
 
@@ -198,4 +201,4 @@ def deg2rad(angle_deg):
         This method converts an angle in radians e[0,2*np.pi) into degrees
         e[0,360)
     """
-    return angle_deg/180.0*np.pi
+    return angle_deg / 180.0 * np.pi
