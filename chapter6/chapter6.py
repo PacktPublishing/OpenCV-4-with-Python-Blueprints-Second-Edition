@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""OpenCV with Python Blueprints
+"""
+OpenCV with Python Blueprints
 Chapter 6: Learning to Recognize Traffic Signs
 
 Traffic sign recognition using support vector machines (SVMs).
@@ -13,10 +14,9 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-from datasets import gtsrb
-
-__author__ = "Michael Beyeler"
-__license__ = "GNU GPL 3.0 or later"
+from data.gtsrb import load_training_data
+from data.gtsrb import load_test_data
+from data.process import grayscale_featurize
 
 
 def train_MLP(X_train, y_train):
@@ -38,7 +38,25 @@ def train_one_vs_all_SVM(X_train, y_train):
     return single_svm
 
 
-def main():
+def new_main(labels=[0, 10]):
+    train_data, y_train = load_training_data(labels)
+    test_data, y_test = load_test_data(labels)
+
+    for featurize in [grayscale_featurize]:
+        x_train = np.array(featurize(train_data))
+        model = train_one_vs_all_SVM(x_train, y_train)
+
+        x_test = featurize(test_data)
+        res = model.predict(x_test)
+        print('res', res)
+        y_predict = res[1].flatten()
+        mask = y_predict == y_test
+        correct = np.count_nonzero(mask)
+        print('correct', correct)
+        print(100 * correct / y_predict.size)
+
+
+def old_main():
     strategies = {
         'SVM': train_one_vs_all_SVM,
         'MLP': train_MLP,
