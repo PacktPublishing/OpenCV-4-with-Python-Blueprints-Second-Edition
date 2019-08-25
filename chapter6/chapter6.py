@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 from data.gtsrb import load_training_data
 from data.gtsrb import load_test_data
 from data.process import grayscale_featurize
+from data.process import hog_featurize
 
 
 def train_MLP(X_train, y_train):
@@ -45,7 +46,7 @@ def main(labels=[0, 10, 20, 30, 40]):
     y_train = np.array(train_labels)
     y_test = np.array(test_labels)
 
-    for featurize in [grayscale_featurize]:
+    for featurize in [hog_featurize, grayscale_featurize]:
         x_train = featurize(train_data)
         model = train_one_vs_all_SVM(x_train, y_train)
 

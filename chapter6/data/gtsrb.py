@@ -78,26 +78,33 @@ def _load_data(filepath, labels):
     return data, targets
 
 
-def download_IJCNN_sorted_test_data():
-    return _download('GTSRB_Online-Test-Images-Sorted.zip')
-
-
 def load_test_data(labels=[0, 10]):
-    filepath = download_IJCNN_sorted_test_data()
+    filepath = _download('GTSRB_Online-Test-Images-Sorted.zip',
+                         md5sum='b7bba7dad2a4dc4bc54d6ba2716d163b')
     return _load_data(filepath, labels)
 
 
-def download_IJCNN_training_data():
-    return _download('GTSRB-Training_fixed.zip',
-                     md5sum='513f3c79a4c5141765e10e952eaa2478')
-
-
 def load_training_data(labels=[0, 10]):
-    filepath = download_IJCNN_training_data()
+    filepath = _download('GTSRB-Training_fixed.zip',
+                         md5sum='513f3c79a4c5141765e10e952eaa2478')
     return _load_data(filepath, labels)
 
 
 if __name__ == '__main__':
-    download_IJCNN_training_data()
-    download_IJCNN_sorted_test_data()
-    # X, Y = load_training_data()
+    train_data, train_labels = load_training_data(labels=None)
+    print(train_data[0].shape)
+    np.random.seed(42)
+    indices = np.arange(len(train_data))
+    np.random.shuffle(indices)
+    print(indices[:15])
+    for r in range(3):
+        for c in range(5):
+            i = 5 * r + c
+            ax = plt.subplot(3, 5, 1 + i)
+            sample = train_data[indices[i]]
+            print(sample.shape)
+
+            ax.imshow(cv2.resize(sample, (32, 32)), cmap=cm.Greys_r)
+            ax.axis('off')
+    plt.tight_layout()
+    plt.show()

@@ -10,7 +10,7 @@ def resize_data(data, size=(32, 32)):
 
 
 
-def hog_featurizer(data):
+def hog_featurize(data):
     """
     Featurize using histogram of gradients.
 
@@ -133,3 +133,8 @@ def load_data(rootpath="datasets/gtsrb_training", feature=None, cut_roi=True,
 
     return (X_train, y_train), (X_test, y_test)
 
+
+if __name__ == '__main__':
+    from data.gtsrb import load_training_data
+
+    train_data, train_labels = load_training_data(labels=[3, 22])
