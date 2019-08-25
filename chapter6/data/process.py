@@ -2,8 +2,12 @@ import cv2
 import numpy as np
 
 
+UNIFORM_SIZE = (16, 16)
+
+
 def resize_data(data, size=(32, 32)):
     return [cv2.resize(x, size) for x in data]
+
 
 
 def hog_featurizer(data):
@@ -35,16 +39,18 @@ def grayscale_featurize(data):
     Featurize by calculating grayscale values of the data
 
     For each image:
-        1. Convert the image to grayscale (values in 0 - 255 range)
-        2. Convert each image to have pixel value in (0, 1) and flatten
-        3. Subtract average pixel value of the flattened vector.
+        1. resize all images to have the same (usually smaller size)
+        2. Convert the image to grayscale (values in 0 - 255 range)
+        3. Convert each image to have pixel value in (0, 1) and flatten
+        4. Subtract average pixel value of the flattened vector.
     """
-    gray_data = (cv2.cvtColor(x, cv2.COLOR_BGR2GRAY) for x in data)
-    scaled_data = [np.array(x).astype(np.float32).flatten() / 255
-                   for x in gray_data]
-    print(scaled_data[0])
+    # uniform_size = (32, 32)
 
-    return [x - x.mean() for x in scaled_data]
+    resized_images = (cv2.resize(x, UNIFORM_SIZE) for x in data)
+    gray_data = (cv2.cvtColor(x, cv2.COLOR_BGR2GRAY) for x in resized_images)
+    scaled_data = (np.array(x).astype(np.float32).flatten() / 255
+                   for x in gray_data)
+    return np.vstack([x - x.mean() for x in scaled_data])
 
 
 def load_data(rootpath="datasets/gtsrb_training", feature=None, cut_roi=True,

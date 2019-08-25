@@ -1,6 +1,6 @@
 import tensorflow as tf
-from datasets import gtsrb
 import numpy as np
+from data.process import UNIFORM_SIZE
 import cv2
 # https://answers.opencv.org/question/175699/readnetfromtensorflow-fails-on-retrained-nn/
 
@@ -8,20 +8,31 @@ import cv2
 
 # https://heartbeat.fritz.ai/real-time-object-detection-on-raspberry-pi-using-opencv-dnn-98827255fa60
 
+from data.gtsrb import load_training_data
+from data.gtsrb import load_test_data
+
+
 def normalize(x):
-    one_size = cv2.resize(x, (32, 32)).astype(np.float32) / 255
-    return one_size - np.mean(one_size)
+    """
+    Do minimum pre-processing
+    1. resize to UNIFORM_SIZE
+    2. scale to (0, 1) range
+    3. subtract the mean of all pixel values
+    """
+    one_size = cv2.resize(x, UNIFORM_SIZE).astype(np.float32) / 255
+    return one_size - one_size.mean()
 
 
 def train_tf_model(X_train, y_train):
     model = tf.keras.models.Sequential([
-        tf.keras.layers.Conv2D(44, (3, 3), input_shape=(32, 32, 3),
+        tf.keras.layers.Conv2D(44, (3, 3),
+                               input_shape=list(UNIFORM_SIZE) + [3],
                                activation='relu'),
         tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2),
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(128, activation='relu'),
         tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(21, activation='softmax')
+        tf.keras.layers.Dense(43, activation='softmax')
     ])
 
     model.compile(optimizer='adam',
@@ -32,28 +43,15 @@ def train_tf_model(X_train, y_train):
     return model
 
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
+    train_data, train_labels = load_training_data(labels=None)
+    test_data, test_labels = load_test_data(labels=None)
 
-(raw_X_train, y_train), (raw_X_test, y_test) = gtsrb.load_data()
-X_train = np.array([normalize(x) for x in raw_X_train])
-X_test = np.array([normalize(x) for x in raw_X_test])
-model = train_tf_model(X_train, y_train)
+    x_train = np.array([normalize(x) for x in train_data])
+    model = train_tf_model(x_train, train_labels)
 
-model
-from tensorflow.python.saved_model import builder as saved_model_builder
-from tensorflow.python.saved_model.signature_def_utils import predict_signature_def
-from tensorflow.python.saved_model import tag_constants
-tf.saved_model.save(model, "models/10/")
-builder = saved_model_builder.SavedModelBuilder("models/11/")
-signature = predict_signature_def(inputs={"images": model.input},
-                                      outputs={"scores": model.output})
-with tf.keras.backend.get_session() as sess:
-    # Save the meta graph and the variables
-    builder.add_meta_graph_and_variables(sess=sess, tags=[tag_constants.SERVING],
-                                     signature_def_map={"predict": signature})
-builder.save()
-tf.train.write_graph(tf.keras.backend.get_session().graph_def,"./models",  "saved_model.pbtxt")
+    x_test = np.array([normalize(x) for x in test_data])
+    y_hat = model.predict_classes(x_test)
 
-
-m = cv2.dnn.readNetFromTensorflow('models/11/saved_model.pb','models/saved_model.pbtxt')
-m = cv2.dnn.readNetFromTensorflow('models/11/saved_model.pb')
+    acc = sum(y_hat == np.array(test_labels)) / len(test_labels)
+    print(f'Accuracy = {acc:.3f}')

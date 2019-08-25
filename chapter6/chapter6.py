@@ -38,17 +38,20 @@ def train_one_vs_all_SVM(X_train, y_train):
     return single_svm
 
 
-def new_main(labels=[0, 10]):
-    train_data, y_train = load_training_data(labels)
-    test_data, y_test = load_test_data(labels)
+def main(labels=[0, 10, 20, 30, 40]):
+    train_data, train_labels = load_training_data(labels)
+    test_data, test_labels = load_test_data(labels)
+
+    y_train = np.array(train_labels)
+    y_test = np.array(test_labels)
 
     for featurize in [grayscale_featurize]:
-        x_train = np.array(featurize(train_data))
+        x_train = featurize(train_data)
         model = train_one_vs_all_SVM(x_train, y_train)
 
         x_test = featurize(test_data)
         res = model.predict(x_test)
-        print('res', res)
+        # print('res', res)
         y_predict = res[1].flatten()
         mask = y_predict == y_test
         correct = np.count_nonzero(mask)
@@ -152,4 +155,4 @@ def old_main():
 
 
 if __name__ == '__main__':
-    main()
+    main(labels=None)

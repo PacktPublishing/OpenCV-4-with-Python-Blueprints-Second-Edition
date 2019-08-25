@@ -61,7 +61,7 @@ def _load_data(filepath, labels):
             # Only iterate over annotations files
             *dir_path, csv_filename = path.split('/')
             label_str = dir_path[-1]
-            if int(label_str) not in labels:
+            if labels is not None and int(label_str) not in labels:
                 continue
             with data_zip.open(path, 'r') as csvfile:
                 reader = csv.DictReader(TextIOWrapper(csvfile), delimiter=';')
