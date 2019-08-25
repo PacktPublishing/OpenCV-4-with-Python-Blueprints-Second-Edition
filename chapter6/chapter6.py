@@ -14,8 +14,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from datasets import gtsrb
-# from classifiers import MultiClassSVM
-# from classifiers import OneVsAllMultiSVM
 
 __author__ = "Michael Beyeler"
 __license__ = "GNU GPL 3.0 or later"

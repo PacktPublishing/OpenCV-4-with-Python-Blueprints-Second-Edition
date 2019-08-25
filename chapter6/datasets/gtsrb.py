@@ -72,7 +72,7 @@ def load_data(rootpath="datasets/gtsrb_training", feature=None, cut_roi=True,
         gt_file.close()
 
     # perform feature extraction
-    # X = _extract_feature(X, feature)
+    X = _extract_feature(X, feature)
 
     np.random.seed(seed)
     np.random.shuffle(X)
