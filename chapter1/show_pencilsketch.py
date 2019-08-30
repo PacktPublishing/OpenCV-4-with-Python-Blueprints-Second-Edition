@@ -9,7 +9,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--standalone', action='store_true')
     parser.add_argument('--canvas')
-    parser.add_argument('--source', default='lena.png')
+    parser.add_argument('--source', default='media/lena.png')
     args = parser.parse_args()
 
     dimensions = (512, 512)
