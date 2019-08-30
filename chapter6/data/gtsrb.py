@@ -51,7 +51,6 @@ def _md5sum_matches(file_path, checksum):
 
 
 def _load_data(filepath, labels):
-    # Dictionaries form names to either data or targets.
     data, targets = [], []
 
     with ZipFile(filepath) as data_zip:
@@ -92,19 +91,17 @@ def load_training_data(labels=[0, 10]):
 
 if __name__ == '__main__':
     train_data, train_labels = load_training_data(labels=None)
-    print(train_data[0].shape)
-    np.random.seed(42)
-    indices = np.arange(len(train_data))
-    np.random.shuffle(indices)
-    print(indices[:15])
-    for r in range(3):
-        for c in range(5):
-            i = 5 * r + c
-            ax = plt.subplot(3, 5, 1 + i)
-            sample = train_data[indices[i]]
-            print(sample.shape)
-
-            ax.imshow(cv2.resize(sample, (32, 32)), cmap=cm.Greys_r)
-            ax.axis('off')
-    plt.tight_layout()
-    plt.show()
+    np.random.seed(75)
+    for _ in range(100):
+        indices = np.arange(len(train_data))
+        np.random.shuffle(indices)
+        for r in range(3):
+            for c in range(5):
+                i = 5 * r + c
+                ax = plt.subplot(3, 5, 1 + i)
+                sample = train_data[indices[i]]
+                ax.imshow(cv2.resize(sample, (32, 32)), cmap=cm.Greys_r)
+                ax.axis('off')
+        plt.tight_layout()
+        plt.show()
+        np.random.seed(np.random.randint(len(indices)))

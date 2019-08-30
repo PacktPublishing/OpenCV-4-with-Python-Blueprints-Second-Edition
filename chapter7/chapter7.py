@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""OpenCV with Python Blueprints
-    Chapter 7: Learning to Recognize Emotion in Faces
+"""
+OpenCV with Python Blueprints
+Chapter 7: Learning to Recognize Emotion in Faces
 
     An app that combines both face detection and face recognition, with a
     focus on recognizing emotional expressions in the detected faces.
@@ -22,7 +23,6 @@
 import cv2
 import numpy as np
 
-import time
 import wx
 from os import path
 import pickle as pickle

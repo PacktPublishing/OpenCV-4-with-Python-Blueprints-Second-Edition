@@ -39,26 +39,45 @@ def train_one_vs_all_SVM(X_train, y_train):
     return single_svm
 
 
+def train_sklearn_random_forest(X_train, y_train):
+    from sklearn.ensemble import RandomForestClassifier
+    clf = RandomForestClassifier(n_estimators=100, max_depth=15,
+                                 n_jobs=4,
+                                 random_state=42)
+    clf.fit(X_train, y_train)
+    return clf
+
+
+def train_sklearn_adaboost(X_train, y_train):
+    from sklearn.ensemble import AdaBoostClassifier
+    clf = AdaBoostClassifier(n_estimators=100,
+                             random_state=42)
+    clf.fit(X_train, y_train)
+    return clf
+
+
 def main(labels=[0, 10, 20, 30, 40]):
     train_data, train_labels = load_training_data(labels)
     test_data, test_labels = load_test_data(labels)
 
     y_train = np.array(train_labels)
-    y_test = np.array(test_labels)
-
+    y_test = np.array(test_labels) 
     for featurize in [hog_featurize, grayscale_featurize]:
         x_train = featurize(train_data)
         print(x_train.shape)
         model = train_one_vs_all_SVM(x_train, y_train)
+        # model = train_sklearn_random_forest(x_train, y_train)
+        # model = train_sklearn_adaboost(x_train, y_train)
 
         x_test = featurize(test_data)
         res = model.predict(x_test)
-        # print('res', res)
-        y_predict = res[1].flatten()
-        mask = y_predict == y_test
-        correct = np.count_nonzero(mask)
-        print('correct', correct)
-        print(100 * correct / y_predict.size)
+        if len(res.shape) > 1:
+            y_predict = res[1].flatten()
+        else:
+            y_predict = res
+        num_correct = sum(y_predict == y_test)
+        print('num_correct', num_correct)
+        print(100 * num_correct / y_predict.size)
 
 
 def old_main():

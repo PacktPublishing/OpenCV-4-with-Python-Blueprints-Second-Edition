@@ -1,6 +1,5 @@
 import tensorflow as tf
 import numpy as np
-from data.process import UNIFORM_SIZE
 import cv2
 # https://answers.opencv.org/question/175699/readnetfromtensorflow-fails-on-retrained-nn/
 
@@ -10,6 +9,8 @@ import cv2
 
 from data.gtsrb import load_training_data
 from data.gtsrb import load_test_data
+
+UNIFORM_SIZE = (32, 32)
 
 
 def normalize(x):

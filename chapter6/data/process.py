@@ -2,11 +2,7 @@ import cv2
 import numpy as np
 
 
-# UNIFORM_SIZE = (16, 16)
-UNIFORM_SIZE = (32, 32)
-
-
-def hog_featurize(data):
+def hog_featurize(data, *, scale_size=(32, 32)):
     """
     Featurize using histogram of gradients.
 
@@ -17,18 +13,21 @@ def hog_featurize(data):
         3. Return a flattened list of gradients as a final feature.
 
     """
-    block_size = (UNIFORM_SIZE[0] // 2, UNIFORM_SIZE[1] // 2)
-    block_stride = (UNIFORM_SIZE[0] // 4, UNIFORM_SIZE[1] // 4)
+    block_size = (scale_size[0] // 2, scale_size[1] // 2)
+    block_stride = (scale_size[0] // 4, scale_size[1] // 4)
     cell_size = block_stride
-    hog = cv2.HOGDescriptor(UNIFORM_SIZE, block_size, block_stride,
+    hog = cv2.HOGDescriptor(scale_size, block_size, block_stride,
                             cell_size, 9)
 
-    resized_images = (cv2.resize(x, UNIFORM_SIZE) for x in data)
+    resized_images = (cv2.resize(x, scale_size) for x in data)
 
     return np.array([hog.compute(x).flatten() for x in resized_images])
 
 
-def grayscale_featurize(data):
+def hsv_featurize(data, *, scale_size=(16, 16)):
+
+
+def grayscale_featurize(data, *, scale_size=(16, 16)):
     """
     Featurize by calculating grayscale values of the data
 
@@ -38,7 +37,7 @@ def grayscale_featurize(data):
         3. Convert each image to have pixel value in (0, 1) and flatten
         4. Subtract average pixel value of the flattened vector.
     """
-    resized_images = (cv2.resize(x, UNIFORM_SIZE) for x in data)
+    resized_images = (cv2.resize(x, scale_size) for x in data)
     gray_data = (cv2.cvtColor(x, cv2.COLOR_BGR2GRAY) for x in resized_images)
     scaled_data = (np.array(x).astype(np.float32).flatten() / 255
                    for x in gray_data)
