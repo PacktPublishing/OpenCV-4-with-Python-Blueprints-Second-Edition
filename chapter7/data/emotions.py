@@ -29,7 +29,7 @@ def load_as_training_data(path):
         reader = csv.reader(infile)
         for label, sample in reader:
             Y.append(encode(label))
-            X.append(np.array(json.loads(sample)).flatten())
+            X.append(np.array(json.loads(sample), dtype=np.float32).flatten())
     return cv2.ml.TrainData_create(np.array(X), cv2.ml.ROW_SAMPLE, np.array(Y))
 
 
