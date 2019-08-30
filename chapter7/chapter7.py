@@ -28,9 +28,8 @@ import numpy as np
 import wx
 from os import path
 import pickle as pickle
-import csv
 
-from datasets import homebrew
+from data.emotions import save_datum
 from detectors import FaceDetector
 from classifiers import MultiLayerPerceptron
 from gui import BaseLayout as OldBaseLayout
@@ -120,9 +119,7 @@ class DataCollectorLayout(BaseLayout):
         else:
             success, aligned_head = self.face_detector.align_head(self.head)
             if success:
-                with open(self.training_data, 'a') as outfile:
-                    writer = csv.writer(outfile)
-                    writer.writerow([label, aligned_head.tolist()])
+                save_datum(self.training_data, label, aligned_head)
                 print(f"Saved {label} training datum.")
             else:
                 print("Could not align head (eye detection failed?)")
