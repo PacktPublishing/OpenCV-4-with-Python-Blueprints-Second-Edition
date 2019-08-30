@@ -2,25 +2,38 @@ import csv
 import numpy as np
 import cv2
 import json
+from enum import IntEnum, auto, unique
 import sys
 csv.field_size_limit(sys.maxsize)
 
 
+@unique
+class Emotion(IntEnum):
+    neutral = auto()
+
+
+EMOTIONS = {
+    'neutral': 0,
+    'surprised': 1,
+    'angry': 2,
+    'happy': 3,
+    'sad': 4,
+    'disgusted': 5
+}
+
+REVERSE_EMOTIONS = {v: k for k, v in EMOTIONS.items()}
+
+
 def encode(label):
-    if label == 'neutral':
-        return 0
-    elif label == 'surprised':
-        return 1
-    elif label == 'angry':
-        return 2
-    elif label == 'happy':
-        return 3
-    elif label == 'sad':
-        return 4
-    elif label == 'disgusted':
-        return 5
-    else:
-        raise NotImplementedError()
+    return EMOTIONS[label]
+
+
+def decode(value):
+    return REVERSE_EMOTIONS[value]
+
+
+def featurize(datum):
+    return np.array(datum, dtype=np.float32).flatten()
 
 
 def load_as_training_data(path):
@@ -29,7 +42,7 @@ def load_as_training_data(path):
         reader = csv.reader(infile)
         for label, sample in reader:
             Y.append(encode(label))
-            X.append(np.array(json.loads(sample), dtype=np.float32).flatten())
+            X.append(featurize(json.loads(sample)))
     return cv2.ml.TrainData_create(np.array(X), cv2.ml.ROW_SAMPLE, np.array(Y))
 
 

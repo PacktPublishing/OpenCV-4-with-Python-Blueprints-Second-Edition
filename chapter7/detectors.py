@@ -63,7 +63,7 @@ class FaceDetector:
                                 cv2.COLOR_RGB2GRAY)
             return True, rgb_img, head, (x, y)
 
-        return False, rgb_img, None, None
+        return False, rgb_img, None, (None, None)
 
     def eye_centers(self, head, *, outline=False):
         height, width = head.shape[:2]
