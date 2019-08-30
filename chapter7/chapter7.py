@@ -28,6 +28,7 @@ import numpy as np
 import wx
 from os import path
 import pickle as pickle
+import csv
 
 from datasets import homebrew
 from detectors import FaceDetector
@@ -41,14 +42,24 @@ __license__ = "GNU GPL 3.0 or later"
 
 class DataCollectorLayout(BaseLayout):
 
+    def __init__(self, *args,
+                 trained_mlp='model/mlp.xml',
+                 training_data='data/cropped_faces.csv',
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        self.face_detector = FaceDetector(
+            face_cascade='params/haarcascade_frontalface_default.xml',
+            eye_cascade='params/haarcascade_lefteye_2splits.xml')
+
+        self.training_data = training_data
+
+        load_mlp = 'params/mlp.xml',
+
     def augment_layout(self):
         """Initializes GUI"""
         # initialize data structure
         self.samples = []
         self.labels = []
-
-        # call method to save data upon exiting
-        # self.Bind(wx.EVT_CLOSE, self._on_exit)
 
         # create a horizontal layout with all buttons
         pnl2 = wx.Panel(self, -1)
@@ -80,13 +91,8 @@ class DataCollectorLayout(BaseLayout):
         self.panels_vertical.Add(pnl2, flag=wx.EXPAND | wx.BOTTOM, border=1)
         self.panels_vertical.Add(pnl3, flag=wx.EXPAND | wx.BOTTOM, border=1)
 
-        face_casc='params/haarcascade_frontalface_default.xml'
-        left_eye_casc='params/haarcascade_lefteye_2splits.xml'
-        right_eye_casc='params/haarcascade_righteye_2splits.xml'
-        self.faces = FaceDetector(face_casc, left_eye_casc, right_eye_casc)
-
     def process_frame(self, frame_rgb: np.ndarray) -> np.ndarray:
-        success, frame, self.head, (x, y) = self.faces.detect(frame_rgb)
+        success, frame, self.head, _ = self.face_detector.detect_face(frame_rgb)
         return frame
 
     def _on_snapshot(self, evt):
@@ -112,12 +118,12 @@ class DataCollectorLayout(BaseLayout):
         if self.head is None:
             print("No face detected")
         else:
-            success, head = self.faces.align_head(self.head)
-            print(success, head)
+            success, aligned_head = self.face_detector.align_head(self.head)
             if success:
-                print("Added sample to training set")
-                self.samples.append(head.flatten())
-                self.labels.append(label)
+                with open(self.training_data, 'a') as outfile:
+                    writer = csv.writer(outfile)
+                    writer.writerow([label, aligned_head.tolist()])
+                print(f"Saved {label} training datum.")
             else:
                 print("Could not align head (eye detection failed?)")
 
@@ -355,7 +361,7 @@ class FaceLayout(OldBaseLayout):
         self.Destroy()
 
 
-def run_layout(layout_cls, title):
+def run_layout(layout_cls, **kwargs):
     # open webcam
     capture = cv2.VideoCapture(0)
     # opening the channel ourselves, if it failed to open.
@@ -367,7 +373,7 @@ def run_layout(layout_cls, title):
 
     # start graphical user interface
     app = wx.App()
-    layout = layout_cls(capture, title=title)
+    layout = layout_cls(capture, **kwargs)
     layout.Center()
     layout.Show()
     app.MainLoop()
@@ -395,8 +401,10 @@ def run_application():
 if __name__ == '__main__':
     # main()
     parser = argparse.ArgumentParser()
+    parser.add_argument('mode', choices=['collect', 'demo'])
     args = parser.parse_args()
-    if args.collect_traing_data:
-        run_layout(DataCollectorLayout, 'Collecting Data')
-    else:
-        run_layout(DemoLayout, 'Facial Expression Recognition')
+
+    if args.mode == 'collect':
+        run_layout(DataCollectorLayout, title='Collect Data')
+    elif args.mode == 'demo':
+        raise NotImplementedError()
