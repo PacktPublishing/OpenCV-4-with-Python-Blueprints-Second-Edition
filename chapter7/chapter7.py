@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""OpenCV with Python Blueprints
-    Chapter 7: Learning to Recognize Emotion in Faces
+
+"""
+OpenCV with Python Blueprints
+Chapter 7: Learning to Recognize Emotion in Faces
 
     An app that combines both face detection and face recognition, with a
     focus on recognizing emotional expressions in the detected faces.
@@ -19,115 +21,74 @@
       to the live stream of the webcam.
 """
 
+import argparse
 import cv2
 import numpy as np
 
-import time
 import wx
 from os import path
 import pickle as pickle
 
-from datasets import homebrew
+from data.emotions import save_datum, decode, featurize
 from detectors import FaceDetector
 from classifiers import MultiLayerPerceptron
-from gui import BaseLayout
-
-__author__ = "Michael Beyeler"
-__license__ = "GNU GPL 3.0 or later"
+from gui import BaseLayout as OldBaseLayout
+from wx_gui import BaseLayout
 
 
-class FaceLayout(BaseLayout):
-    """A custom layout for face detection and facial expression recognition
+class FacialExpressionRecognizerLayout(BaseLayout):
+    def __init__(self, *args,
+                 svm_path=None,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        self.clf = cv2.ml.SVM_load(svm_path)
 
-        A GUI to both assemble a training set and to perform real-time
-        classification on the live stream of a webcam using a pre-trained
-        classifier.
+        self.face_detector = FaceDetector(
+            face_cascade='params/haarcascade_frontalface_default.xml',
+            eye_cascade='params/haarcascade_lefteye_2splits.xml')
 
-        The GUI operates in two different modes:
-        * Training Mode: In training mode, the app will collect image frames,
-                         detect a face therein, assignassign a label depending
-                         on the facial expression, and upon exiting save all
-                         collected data samples in a file, so that it can be
-                         parsed by datasets.homebrew.
-        * Testing Mode:  In testing mode, the app will detect a face in each
-                         video frame and predict the corresponding class
-                         label using a pre-trained MLP.
-    """
+    def augment_layout(self):
+        pass
 
-    def _init_custom_layout(self):
+    def process_frame(self, frame_rgb: np.ndarray) -> np.ndarray:
+        success, frame, self.head, (x, y) = self.face_detector.detect_face(
+            frame_rgb)
+        if not success:
+            return frame
+
+        success, head = self.face_detector.align_head(self.head)
+        if not success:
+            return frame
+
+        # We have to pass [1 x n] array predict.
+        features = featurize(head)[None]
+        result = self.clf.predict(features)
+        label = int(result[1][0])
+
+        # Draw predicted label above the bounding box.
+        cv2.putText(frame, decode(label), (x, y - 20),
+                    cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+
+        return frame
+
+
+class DataCollectorLayout(BaseLayout):
+
+    def __init__(self, *args,
+                 training_data='data/cropped_faces.csv',
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        self.face_detector = FaceDetector(
+            face_cascade='params/haarcascade_frontalface_default.xml',
+            eye_cascade='params/haarcascade_lefteye_2splits.xml')
+
+        self.training_data = training_data
+
+    def augment_layout(self):
         """Initializes GUI"""
         # initialize data structure
         self.samples = []
         self.labels = []
-
-        # call method to save data upon exiting
-        self.Bind(wx.EVT_CLOSE, self._on_exit)
-
-    def init_algorithm(
-            self,
-            save_training_file='datasets/faces_training.pkl',
-            load_preprocessed_data='datasets/faces_preprocessed.pkl',
-            load_mlp='params/mlp.xml',
-            face_casc='params/haarcascade_frontalface_default.xml',
-            left_eye_casc='params/haarcascade_lefteye_2splits.xml',
-            right_eye_casc='params/haarcascade_righteye_2splits.xml'):
-        """Initializes face detector and facial expression classifier
-
-            This method initializes both the face detector and the facial
-            expression classifier.
-
-            :param save_training_file:     filename for storing the assembled
-                                           training set
-            :param load_preprocessed_data: filename for loading a previously
-                                           preprocessed dataset (for
-                                           classification in Testing Mode)
-            :param load_mlp:               filename for loading a pre-trained
-                                           MLP classifier (use the script
-                                           train_test_mlp.py)
-            :param face_casc:              path to a face cascade
-            :param left_eye_casc:          path to a left-eye cascade
-            :param right_eye_casc:         path to a right-eye cascade
-        """
-        self.data_file = save_training_file
-        self.faces = FaceDetector(face_casc, left_eye_casc, right_eye_casc)
-        self.head = None
-
-        # load preprocessed dataset to access labels and PCA params
-        if path.isfile(load_preprocessed_data):
-            (_, y_train), (_, y_test), V, m = homebrew.load_from_file(
-                load_preprocessed_data)
-            self.pca_V = V
-            self.pca_m = m
-            self.all_labels = np.unique(np.hstack((y_train, y_test)))
-
-            # load pre-trained multi-layer perceptron
-            if path.isfile(load_mlp):
-                layer_sizes = np.array([self.pca_V.shape[1],
-                                        len(self.all_labels)])
-                self.MLP = MultiLayerPerceptron(layer_sizes, self.all_labels)
-                self.MLP.load(load_mlp)
-            else:
-                print("Warning: Testing is disabled")
-                print("Could not find pre-trained MLP file ", load_mlp)
-                self.testing.Disable()
-        else:
-            print("Warning: Testing is disabled")
-            print("Could not find data file ", load_preprocessed_data)
-            self.testing.Disable()
-
-    def _create_custom_layout(self):
-        """Decorates the GUI with buttons for assigning class labels"""
-        # create horizontal layout with train/test buttons
-        pnl1 = wx.Panel(self, -1)
-        self.training = wx.RadioButton(pnl1, -1, 'Train', (10, 10),
-                                       style=wx.RB_GROUP)
-        self.Bind(wx.EVT_RADIOBUTTON, self._on_training, self.training)
-        self.testing = wx.RadioButton(pnl1, -1, 'Test')
-        self.Bind(wx.EVT_RADIOBUTTON, self._on_testing, self.testing)
-        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
-        hbox1.Add(self.training, 1)
-        hbox1.Add(self.testing, 1)
-        pnl1.SetSizer(hbox1)
 
         # create a horizontal layout with all buttons
         pnl2 = wx.Panel(self, -1)
@@ -156,57 +117,15 @@ class FaceLayout(BaseLayout):
         pnl3.SetSizer(hbox3)
 
         # arrange all horizontal layouts vertically
-        self.panels_vertical.Add(pnl1, flag=wx.EXPAND | wx.TOP, border=1)
         self.panels_vertical.Add(pnl2, flag=wx.EXPAND | wx.BOTTOM, border=1)
         self.panels_vertical.Add(pnl3, flag=wx.EXPAND | wx.BOTTOM, border=1)
 
-    def _process_frame(self, frame):
-        """Processes each captured frame
-
-            This method processes each captured frame.
-            * Training mode:  Performs face detection.
-            * Testing mode:   Performs face detection, and predicts the class
-                              label of the facial expression.
+    def process_frame(self, frame_rgb: np.ndarray) -> np.ndarray:
         """
-        # detect face
-        success, frame, self.head, (x, y) = self.faces.detect(frame)
-
-        if success and self.testing.GetValue():
-            # if face found: preprocess (align)
-            success, head = self.faces.align_head(self.head)
-            if success:
-                # extract features using PCA (loaded from file)
-                X, _, _ = homebrew.extract_features([head.flatten()],
-                                                    self.pca_V, self.pca_m)
-
-                # predict label with pre-trained MLP
-                label = self.MLP.predict(np.array(X))[0]
-
-                # draw label above bounding box
-                cv2.putText(frame, str(label), (x, y - 20),
-                            cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-
+        Add a bounding box around the face if a face is detected.
+        """
+        _, frame, self.head, _ = self.face_detector.detect_face(frame_rgb)
         return frame
-
-    def _on_training(self, evt):
-        """Enables all training-related buttons when Training Mode is on"""
-        self.neutral.Enable()
-        self.happy.Enable()
-        self.sad.Enable()
-        self.surprised.Enable()
-        self.angry.Enable()
-        self.disgusted.Enable()
-        self.snapshot.Enable()
-
-    def _on_testing(self, evt):
-        """Disables all training-related buttons when Testing Mode is on"""
-        self.neutral.Disable()
-        self.happy.Disable()
-        self.sad.Disable()
-        self.surprised.Disable()
-        self.angry.Disable()
-        self.disgusted.Disable()
-        self.snapshot.Disable()
 
     def _on_snapshot(self, evt):
         """Takes a snapshot of the current frame
@@ -231,58 +150,42 @@ class FaceLayout(BaseLayout):
         if self.head is None:
             print("No face detected")
         else:
-            success, head = self.faces.align_head(self.head)
+            success, aligned_head = self.face_detector.align_head(self.head)
             if success:
-                print("Added sample to training set")
-                self.samples.append(head.flatten())
-                self.labels.append(label)
+                save_datum(self.training_data, label, aligned_head)
+                print(f"Saved {label} training datum.")
             else:
                 print("Could not align head (eye detection failed?)")
 
-    def _on_exit(self, evt):
-        """Dumps the training data to file upon exiting"""
-        # if we have collected some samples, dump them to file
-        if len(self.samples) > 0:
-            # make sure we don't overwrite an existing file
-            if path.isfile(self.data_file):
-                # file already exists, construct new load_from_file
-                load_from_file, fileext = path.splitext(self.data_file)
-                offset = 0
-                while True:
-                    file = load_from_file + "-" + str(offset) + fileext
-                    if path.isfile(file):
-                        offset += 1
-                    else:
-                        break
-                self.data_file = file
 
-            # dump samples and labels to file
-            f = open(self.data_file, 'wb')
-            pickle.dump(self.samples, f)
-            pickle.dump(self.labels, f)
-            f.close()
-
-            # inform user that file was created
-            print("Saved", len(self.samples), "samples to", self.data_file)
-
-        # deallocate
-        self.Destroy()
-
-
-def main():
+def run_layout(layout_cls, **kwargs):
+    # open webcam
     capture = cv2.VideoCapture(0)
+    # opening the channel ourselves, if it failed to open.
     if not(capture.isOpened()):
         capture.open()
+
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     # start graphical user interface
     app = wx.App()
-    layout = FaceLayout(capture, title='Facial Expression Recognition')
-    layout.init_algorithm()
-    layout.Show(True)
+    layout = layout_cls(capture, **kwargs)
+    layout.Center()
+    layout.Show()
     app.MainLoop()
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('mode', choices=['collect', 'demo'])
+    parser.add_argument('--svm')
+    args = parser.parse_args()
+
+    if args.mode == 'collect':
+        run_layout(DataCollectorLayout, title='Collect Data')
+    elif args.mode == 'demo':
+        assert args.svm is not None, 'you have to provide --svm'
+        run_layout(FacialExpressionRecognizerLayout,
+                   title='Facial Expression Recognizer',
+                   svm_path=args.svm)

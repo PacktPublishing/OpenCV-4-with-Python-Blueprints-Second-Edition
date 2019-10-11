@@ -74,7 +74,6 @@ def segment_arm(frame: np.ndarray, abs_depth_dev: int = 14) -> np.ndarray:
                   flags=4 | (255 << 8))
 
     ret, flooded = cv2.threshold(flood, 129, 255, cv2.THRESH_BINARY)
-    cv2.imshow("flooded", flooded)
     return flooded
 
 
@@ -103,6 +102,7 @@ def find_hull_defects(segment: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     return max_contour, defects
 
 
+
 def detect_num_fingers(contour: np.ndarray, defects: np.ndarray,
                        img_draw: np.ndarray, thresh_deg: float = 80.0) -> Tuple[int, np.ndarray]:
     """Detects the number of extended fingers
@@ -120,10 +120,13 @@ def detect_num_fingers(contour: np.ndarray, defects: np.ndarray,
 
     # if there are no convexity defects, possibly no hull found or no
     # fingers extended
+    if defects is None:
+        return [0, img_draw]
+
     # we assume the wrist will generate two convexity defects (one on each
     # side), so if there are no additional defect points, there are no
     # fingers extended
-    if defects is None or len(defects) <= 2:
+    if len(defects) <= 2:
         return [0, img_draw]
 
     # if there is a sufficient amount of convexity defects, we will find a

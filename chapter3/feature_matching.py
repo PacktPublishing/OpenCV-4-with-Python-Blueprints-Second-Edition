@@ -58,6 +58,8 @@ class FeatureMatching:
         FLANN_INDEX_KDTREE = 0
         index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
         search_params = dict(checks=50)
+        index_params = {"algorithm": 0, "trees": 5}
+        search_params = {"checks": 50}
         self.flann = cv2.FlannBasedMatcher(index_params, search_params)
         # self.flann = cv2.DescriptorMatcher_create(cv2.DescriptorMatcher_FLANNBASED)
         # initialize tracking
