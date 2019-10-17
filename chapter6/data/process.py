@@ -24,7 +24,29 @@ def hog_featurize(data, *, scale_size=(32, 32)):
     return np.array([hog.compute(x).flatten() for x in resized_images])
 
 
+def surf_featurize(data, *, scale_size=(16, 16), num_surf_features=100):
+    feature_detecctor = cv2.FastFeatureDetector_create()
+    kp = feature_detecctor.detect(np.zeros(scale_size).astype(np.uint8))
+    surf = cv2.xfeatures2d_SURF.create(hessianThreshold=400)
+    kp_des = (surf.compute(x, kp) for x in data)
+    return [d[1][:num_surf_features, :] for d in kp_des]
+
+
 def hsv_featurize(data, *, scale_size=(16, 16)):
+    """
+    Featurize by calculating HSV values of the data
+
+    For each image:
+        1. resize all images to have the same (usually smaller size)
+        2. Convert the image to HSV (values in 0 - 255 range)
+        3. Convert each image to have pixel value in (0, 1) and flatten
+        4. Subtract average pixel value of the flattened vector.
+    """
+    resized_images = (cv2.resize(x, scale_size) for x in data)
+    hsv_data = (cv2.cvtColor(x, cv2.COLOR_BGR2HSV) for x in resized_images)
+    scaled_data = (np.array(x).astype(np.float32).flatten() / 255
+                   for x in hsv_data)
+    return np.vstack([x - x.mean() for x in scaled_data])
 
 
 def grayscale_featurize(data, *, scale_size=(16, 16)):

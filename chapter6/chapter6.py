@@ -16,8 +16,8 @@ import matplotlib.pyplot as plt
 
 from data.gtsrb import load_training_data
 from data.gtsrb import load_test_data
-from data.process import grayscale_featurize
-from data.process import hog_featurize
+from data.process import surf_featurize, hog_featurize
+from data.process import hsv_featurize, grayscale_featurize
 
 
 def train_MLP(X_train, y_train):
@@ -39,21 +39,34 @@ def train_one_vs_all_SVM(X_train, y_train):
     return single_svm
 
 
+def accuracy(y_predicted, y_true):
+    return sum(y_predicted == y_true) / len(y_true)
+
+
+def precision(y_predicted, y_true, positive_label):
+    cm = confusion_matrix(y_predicted, y_true)
+    true_positives = cm[positive_label, positive_label]
+    total_positives = sum(cm[positive_label])
+    return true_positives / total_positives
+
+
+def recall(y_predicted, y_true, positive_label):
+    cm = confusion_matrix(y_predicted, y_true)
+    true_positives = cm[positive_label, positive_label]
+    class_members = sum(cm[:, positive_label])
+    return true_positives / class_members
+
+
+def confusion_matrix(y_predicted, y_true):
+    num_classes = max(max(y_predicted), max(y_true)) + 1
+    conf_matrix = np.zeros((num_classes, num_classes))
+    for r, c in zip(y_predicted, y_true):
+        conf_matrix[r, c] += 1
+    return conf_matrix
+
+
 def train_sklearn_random_forest(X_train, y_train):
-    from sklearn.ensemble import RandomForestClassifier
-    clf = RandomForestClassifier(n_estimators=100, max_depth=15,
-                                 n_jobs=4,
-                                 random_state=42)
-    clf.fit(X_train, y_train)
-    return clf
-
-
-def train_sklearn_adaboost(X_train, y_train):
-    from sklearn.ensemble import AdaBoostClassifier
-    clf = AdaBoostClassifier(n_estimators=100,
-                             random_state=42)
-    clf.fit(X_train, y_train)
-    return clf
+    pass
 
 
 def main(labels=[0, 10, 20, 30, 40]):
@@ -61,117 +74,27 @@ def main(labels=[0, 10, 20, 30, 40]):
     test_data, test_labels = load_test_data(labels)
 
     y_train = np.array(train_labels)
-    y_test = np.array(test_labels) 
-    for featurize in [hog_featurize, grayscale_featurize]:
+    y_test = np.array(test_labels)
+
+    accuracies = {}
+
+    for featurize in [hog_featurize, grayscale_featurize, hsv_featurize, surf_featurize, rgb_featurize]:
         x_train = featurize(train_data)
         print(x_train.shape)
         model = train_one_vs_all_SVM(x_train, y_train)
-        # model = train_sklearn_random_forest(x_train, y_train)
-        # model = train_sklearn_adaboost(x_train, y_train)
 
         x_test = featurize(test_data)
         res = model.predict(x_test)
-        if len(res.shape) > 1:
-            y_predict = res[1].flatten()
-        else:
-            y_predict = res
-        num_correct = sum(y_predict == y_test)
-        print('num_correct', num_correct)
-        print(100 * num_correct / y_predict.size)
+        y_predict = res[1].flatten()
+        np.save(f'y_predict_{featurize.__name__}', y_predict)
+        np.save('y_true', y_test)
+        accuracies[featurize.__name__] = accuracy(y_predict, y_test)
 
-
-def old_main():
-    strategies = {
-        'SVM': train_one_vs_all_SVM,
-        'MLP': train_MLP,
-    }
-    # features = [None, 'gray', 'rgb', 'hsv', 'hog']
-    features = ['rgb']
-
-    accuracy = np.zeros((len(strategies), len(features)))
-    precision = np.zeros((len(strategies), len(features)))
-    recall = np.zeros((len(strategies), len(features)))
-
-    for i_f, feature in enumerate(features):
-        print("feature", feature)
-        (X_train, y_train), (X_test, y_test) = gtsrb.load_data(
-            "datasets/gtsrb_training",
-            feature=feature,
-            test_split=0.8,
-            seed=42)
-
-        # convert to numpy
-        X_train = np.squeeze(np.array(X_train)).astype(np.float32)
-        y_train = np.array(y_train).astype(np.int)
-        X_test = np.squeeze(np.array(X_test)).astype(np.float32)
-        y_test = np.array(y_test).astype(np.int)
-
-        print(X_train.shape, y_train.shape)
-        print(X_train.dtype, y_train.dtype)
-        print(min(X_train[0]), max(X_train[0]))
-        print(X_train[0])
-
-        # find all class labels
-        unique_labels = np.unique(np.hstack((y_train, y_test)))
-        print(f'number of unique labels is {len(unique_labels)}')
-
-        # TODO: check that split has all the classes.
-
-        for i_s, (label, model_trainer) in enumerate(strategies.items()):
-            model = model_trainer(X_train, y_train)
-            res = model.predict(X_test)
-            print('res', res)
-            y_predict = res[1].flatten()
-            mask = y_predict == y_test
-            correct = np.count_nonzero(mask)
-            print('correct', correct)
-            print(100 * correct / y_predict.size)
-
-            accuracy[i_s, i_f] = correct / y_predict.size
-            precision[i_s, i_f] = correct / y_predict.size
-            recall[i_s, i_f] = correct / y_predict.size
-        
-        # one_vs_all_svm = OneVsAllMultiSVM()
-
-        # one_vs_all_svm.train(X_train, y_train)
-
-        # y_pred = one_vs_all_svm.predict_all(X_test)
-
-        # for s_i, strategy in enumerate(strategies):
-        #     # set up SVMs
-
-        #     # training phase
-        #     print(f"{strategy} - train")
-        #     MCS.train(X_train, y_train)
-
-        #     # test phase
-        #     print(f"{strategy} - test")
-        #     y_pred = MCS.predict_all(X_test)
-        #     # acc, prec, rec = MCS.evaluate(X_test, y_test)
-        #     accuracy[s, f] = acc
-        #     precision[s, f] = np.mean(prec)
-        #     recall[s, f] = np.mean(rec)
-        #     print("       - accuracy: ", acc)
-        #     print("       - mean precision: ", np.mean(prec))
-        #     print("       - mean recall: ", np.mean(rec))
-
-    # plot results as stacked bar plo[//
-    # f, ax = plt.subplots(len(strategies))
-    f, ax = plt.subplots(2)  # FIXME: train
-    for i_s, (label, _) in enumerate(strategies.items()):
-        x = np.arange(len(features))
-        ax[i_s].bar(x - 0.2, accuracy[i_s, :],
-                    width=0.2, color='b', hatch='/', align='center')
-        ax[i_s].bar(x, precision[i_s, :],
-                    width=0.2, color='r', hatch='\\', align='center')
-        ax[i_s].bar(x + 0.2, recall[i_s, :],
-                    width=0.2, color='g', hatch='x', align='center')
-        ax[i_s].axis([-0.5, len(features) + 0.5, 0, 1.5])
-        ax[i_s].legend(('Accuracy', 'Precision', 'Recall'),
-                       loc=2, ncol=3, mode='expand')
-        ax[i_s].set_xticks(np.arange(len(features)), features)
-        ax[i_s].set_title(label)
-
+    plt.bar(accuracies.keys(), accuracies.values())
+    plt.axes().xaxis.set_tick_params(rotation=20)
+    plt.ylim([0, 1])
+    plt.grid()
+    plt.title('Test accuracy for different featurize functions')
     plt.show()
 
 

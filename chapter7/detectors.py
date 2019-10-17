@@ -6,9 +6,6 @@
 import cv2
 import numpy as np
 
-__author__ = "Michael Beyeler"
-__license__ = "GNU GPL 3.0 or later"
-
 
 class FaceDetector:
     """Face Detector
