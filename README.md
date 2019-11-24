@@ -1,4 +1,4 @@
-# OpenCV with Python Blueprints
+# OpenCV-4-with-Python-Blueprints-Second-Edition
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.154060.svg)](https://doi.org/10.5281/zenodo.154060)
 [![Google group](https://img.shields.io/badge/Google-Discussion%20group-lightgrey.svg)](https://groups.google.com/d/forum/opencv-python-blueprints)
@@ -63,17 +63,17 @@ https://groups.google.com/d/forum/opencv-python-blueprints
 
 What readers on Amazon have to say:
 
-> The author does a great job explaining the concepts needed to understand what's happening in the application without 
+> The author does a great job explaining the concepts needed to understand what's happening in the application without
 > the need of going into too many details. <br/>
 &ndash; [Sebastian Montabone](http://www.samontab.com)
 
-> Excellent book to build practical OpenCV projects! I'm still relatively new to OpenCV, but all examples are well 
-> laid out and easy to follow. The author does a good job explaining the concepts in detail and shows how they apply 
-> in real life. As a professional programmer, I especially love that you can just fork the code from GitHub and follow 
+> Excellent book to build practical OpenCV projects! I'm still relatively new to OpenCV, but all examples are well
+> laid out and easy to follow. The author does a good job explaining the concepts in detail and shows how they apply
+> in real life. As a professional programmer, I especially love that you can just fork the code from GitHub and follow
 > along. Strongly recommend to readers with basic knowledge of computer vision, machine learning, and Python!
 &ndash; Amazon Customer
 
-> Usually I'm not a big fan of technical books because they are too dull, but this one is written in an engaging 
+> Usually I'm not a big fan of technical books because they are too dull, but this one is written in an engaging
 > manner with a few dry jokes here and there. Can only recommend! <br/>
 &ndash; lakesouth
 
@@ -116,7 +116,7 @@ http://docs.opencv.org/doc/tutorials/introduction/table_of_content_introduction/
 * Python 2.7 or later: Recent 32-bit and 64-bit installers are available at https://www.python.org/downloads. The
 installation instructions can be found at https://wiki.python.org/moin/BeginnersGuide/Download.
 * NumPy 1.9.2 or later: This package for scientific computing officially comes in 32-bit format only, and can be
-obtained from http://www.scipy.org/scipylib/download.html. The installation instructions can be found at 
+obtained from http://www.scipy.org/scipylib/download.html. The installation instructions can be found at
 http://www.scipy.org/scipylib/building/index.html#building.
 
 In addition, some chapters require the following free Python modules:
@@ -124,11 +124,11 @@ In addition, some chapters require the following free Python modules:
   http://www.wxpython.org/download.php.
   Its installation instructions are given at http://wxpython.org/builddoc.php.
   If you are using Max OS 10.11 (El Capitan), try:
-  
+
   ```
   $ sudo pip install --upgrade --trusted-host wxpython.org --pre -f http://wxpython.org/Phoenix/snapshot-builds/ wxPython_Phoenix
   ```
-  
+
   See [this bug](https://github.com/mbeyeler/opencv-python-blueprints/issues/9) for context.
   Thanks to @KaroAntonio for the fix!
 * matplotlib 1.4.3 or later (Chapters 4 to 7): This 2D plotting library can be obtained from
@@ -151,4 +151,3 @@ license according to Wikipedia. GPL allows for commercial use, distribution, mod
 
 The GPL is a copyleft license, which means that derived works can only be distributed under the same license terms.
 For more information, please see the license file.
-
