@@ -26,15 +26,11 @@ def normalize(x):
 
 def train_tf_model(X_train, y_train):
     model = tf.keras.models.Sequential([
-        tf.keras.layers.Conv2D(50, (3, 3),
+        tf.keras.layers.Conv2D(20, (8, 8),
                                input_shape=list(UNIFORM_SIZE) + [3],
                                activation='relu'),
-        tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2),
+        tf.keras.layers.MaxPooling2D(pool_size=(4, 4), strides=4),
         tf.keras.layers.Dropout(0.15),
-        tf.keras.layers.Conv2D(30, (3, 3),
-                               activation='relu'),
-        tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2),
-        tf.keras.layers.MaxPooling2D(pool_size=(2, 2), strides=2),
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.Dropout(0.15),
@@ -44,7 +40,7 @@ def train_tf_model(X_train, y_train):
     model.compile(optimizer='adam',
                   loss='sparse_categorical_crossentropy',
                   metrics=['accuracy'])
-
+    model.fit(x_train, train_labels, epochs=10)
     return model
 
 
@@ -54,7 +50,6 @@ if __name__ == '__main__':
 
     x_train = np.array([normalize(x) for x in train_data])
     model = train_tf_model(x_train, train_labels)
-
     x_test = np.array([normalize(x) for x in test_data])
 
     for i in range(10):
