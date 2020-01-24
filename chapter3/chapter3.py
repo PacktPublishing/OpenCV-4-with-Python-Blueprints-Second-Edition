@@ -19,7 +19,7 @@ def main():
     capture.set(cv.CAP_PROP_FPS, 5)
     capture.set(cv.CAP_PROP_FRAME_WIDTH, 640)
     capture.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
-    matching = FeatureMatching(train_image='salinger.jpg')
+    matching = FeatureMatching(train_image='train.png')
 
     for success, frame in iter(capture.read, (False, None)):
         cv.imshow("frame", frame)

@@ -35,7 +35,7 @@ class FeatureMatching:
         application, you will need to acquire a SURF license.
     """
 
-    def __init__(self, train_image: str = "salinger.jpg") -> None:
+    def __init__(self, train_image: str = "train.png") -> None:
         """
         Initialize the SURF descriptor, FLANN matcher, and the tracking
         algorithm.
