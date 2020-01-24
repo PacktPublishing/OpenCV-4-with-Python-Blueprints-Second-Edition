@@ -97,8 +97,12 @@ class FeatureMatching:
         # --- feature extraction
         # detect keypoints in the query image (video frame)
         # using SURF descriptor
-        key_query, desc_query = self.f_extractor.detectAndCompute(
-            img_query, None)
+        # key_query, desc_query = self.f_extractor.detectAndCompute(
+        #     img_query, None)
+
+        key_query = self.f_extractor.detect(
+            img_query)
+        key_query, desc_query = self.f_extractor.compute(img_query, key_query)
         # img_keypoints = cv2.drawKeypoints(img_query, key_query, None,
         #      (255, 0, 0), 4)
         # cv2.imshow("keypoints",img_keypoints)
@@ -123,7 +127,8 @@ class FeatureMatching:
                 train_points, query_points, self.sh_train)
             # early outlier detection and rejection
             # if any corners lie significantly outside the image, skip frame
-            if np.any((dst_corners < -20) | (dst_corners > np.array(sh_query) + 20)):
+            if np.any((dst_corners < -20) |
+                      (dst_corners > np.array(sh_query) + 20)):
                 raise Outlier("Out of image")
             # early outlier detection and rejection
             # find the area of the quadrilateral that the four corner points
@@ -137,7 +142,6 @@ class FeatureMatching:
             # reject corner points if area is unreasonable
             if not np.prod(sh_query) / 16. < area < np.prod(sh_query) / 2.:
                 raise Outlier("Area is unreasonably small or large")
-
 
             # --- bring object of interest to frontal plane
             train_points_scaled = self.scale_and_offset(
@@ -176,7 +180,7 @@ class FeatureMatching:
                 img_flann,
                 [dst_corners.astype(np.int)],
                 isClosed=True,
-                color=(0,255,0),
+                color=(0, 255, 0),
                 thickness=3)
             return True, img_warped, img_flann
 
@@ -259,17 +263,15 @@ def draw_good_matches(img1: np.ndarray,
         :param matches: list of good matches
         :returns: annotated output image
     """
-    # Create a new output image that concatenates the two images together
-    # (a.k.a) a montage
+    # Create a new output image of a size that will fit the two images together
     rows1, cols1 = img1.shape[:2]
     rows2, cols2 = img2.shape[:2]
-
     out = np.zeros((max([rows1, rows2]), cols1 + cols2, 3), dtype='uint8')
 
-    # Place the first image to the left
+    # Place the first image on the left
     out[:rows1, :cols1, :] = img1[..., None]
 
-    # Place the next image to the right of it
+    # Place the second image to the right of the first image
     out[:rows2, cols1:cols1 + cols2, :] = img2[..., None]
 
     # For each pair of points we have between both images
