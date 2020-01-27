@@ -1,51 +1,53 @@
 import argparse
 import cv2
+import numpy as np
+from pathlib import Path
 from collections import Counter
-from data.emotions import load_as_training_data
+from data.emotions import load_collected_data
+from data.process import train_test_split
+from data.process import pca_featurize, _pca_featurize
+from data.process import one_hot_encode
+from data.process import pickle_dump
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', required=True)
-    parser.add_argument('--save')
+    parser.add_argument('--save', type=Path)
     args = parser.parse_args()
 
-    svm = cv2.ml.SVM_create()
-    svm.setKernel(cv2.ml.SVM_LINEAR)
-    svm.setType(cv2.ml.SVM_C_SVC)
-    svm.setC(2.67)
-    svm.setGamma(5.383)
+    data, targets = load_collected_data(args.data)
 
-    td = load_as_training_data(args.data)
-    td.setTrainTestSplitRatio(0.8)
+    mlp = cv2.ml.ANN_MLP_create()
+    mlp.setLayerSizes(np.array([20, 10, 6], dtype=np.uint8))
+    mlp.setTrainMethod(cv2.ml.ANN_MLP_BACKPROP, 0.1)
+    mlp.setActivationFunction(cv2.ml.ANN_MLP_SIGMOID_SYM)
+    mlp.setTermCriteria((cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 30, 0.000001 ))
 
-    print(Counter(td.getResponses()))
+    train, test = train_test_split(len(data), 0.8)
+    x_train, pca_args = pca_featurize(np.array(data)[train])
 
-    svm.train(td.getTrainSamples(), cv2.ml.ROW_SAMPLE, td.getTrainResponses())
+    encoded_targets, index_to_label = one_hot_encode(targets)
+    print(encoded_targets.shape)
 
-    print(td.getTestSamples().shape)
-    print(td.getTestSamples().dtype)
-    print(type(td.getTestSamples()))
-    print(td.getTestSamples()[:1])
-    print(svm.predict(td.getTestSamples()[:1]))
+    y_train = encoded_targets[train]
 
-    res = svm.predict(td.getTestSamples())
-    y_hat = res[1]
-    correct = y_hat == td.getTestResponses()
-    print(correct.sum() / len(y_hat))
+    mlp.train(x_train, cv2.ml.ROW_SAMPLE, y_train)
 
-    svm.train(td.getSamples(), cv2.ml.ROW_SAMPLE, td.getResponses())
+    x_test = _pca_featurize(np.array(data)[test], *pca_args)
+    _, predicted = mlp.predict(x_test)
 
-    res = svm.predict(td.getSamples())
-    y_hat = res[1]
-    correct = y_hat.flatten() == td.getResponses().flatten()
-    print(correct.sum() / len(y_hat))
+    y_hat = np.array([index_to_label[np.argmax(y)] for y in predicted])
+    print(y_hat)
+    y_true = np.array(targets)[test]
+    print(y_true)
+
+    print(sum(y_hat == y_true) / len(y_hat))
+
     if args.save:
-        svm.save(args.save)
-
-
-    # TEST 
-    # svm2 = cv2.ml.SVM_create()
-    svm3 = cv2.ml.SVM_load(args.save)
-
-    print(svm3.predict(td.getSamples()))
+        print('args.save')
+        x_all, pca_args = pca_featurize(np.array(data))
+        mlp.train(x_all, cv2.ml.ROW_SAMPLE, encoded_targets)
+        mlp.save(str(args.save / 'mlp.xml'))
+        pickle_dump(index_to_label, args.save / 'index_to_label')
+        pickle_dump(pca_args, args.save / 'pca_args')

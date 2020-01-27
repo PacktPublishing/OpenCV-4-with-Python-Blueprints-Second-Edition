@@ -26,10 +26,11 @@ import cv2
 import numpy as np
 
 import wx
-from os import path
-import pickle as pickle
+from pathlib import Path
 
-from data.emotions import save_datum, decode, featurize
+from data.store import save_datum, pickle_load
+from data.process import featurize
+from data.process import _pca_featurize
 from detectors import FaceDetector
 from classifiers import MultiLayerPerceptron
 from gui import BaseLayout as OldBaseLayout
@@ -38,14 +39,20 @@ from wx_gui import BaseLayout
 
 class FacialExpressionRecognizerLayout(BaseLayout):
     def __init__(self, *args,
-                 svm_path=None,
+                 clf_path=None,
                  **kwargs):
         super().__init__(*args, **kwargs)
-        self.clf = cv2.ml.SVM_load(svm_path)
+        self.clf = cv2.ml.ANN_MLP_load(str(clf_path / 'mlp.xml'))
+
+        self.index_to_label = pickle_load(clf_path / 'index_to_label')
+        self.pca_args = pickle_load(clf_path / 'pca_args')
 
         self.face_detector = FaceDetector(
             face_cascade='params/haarcascade_frontalface_default.xml',
             eye_cascade='params/haarcascade_lefteye_2splits.xml')
+
+    def featruize_head(self, head):
+        return _pca_featurize(head[None], *self.pca_args)
 
     def augment_layout(self):
         pass
@@ -61,12 +68,11 @@ class FacialExpressionRecognizerLayout(BaseLayout):
             return frame
 
         # We have to pass [1 x n] array predict.
-        features = featurize(head)[None]
-        result = self.clf.predict(features)
-        label = int(result[1][0])
+        _, output = self.clf.predict(self.featruize_head(head))
+        label = self.index_to_label[np.argmax(output)]
 
         # Draw predicted label above the bounding box.
-        cv2.putText(frame, decode(label), (x, y - 20),
+        cv2.putText(frame, label, (x, y - 20),
                     cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
 
         return frame
@@ -179,13 +185,13 @@ def run_layout(layout_cls, **kwargs):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', choices=['collect', 'demo'])
-    parser.add_argument('--svm')
+    parser.add_argument('--classifier', type=Path)
     args = parser.parse_args()
 
     if args.mode == 'collect':
         run_layout(DataCollectorLayout, title='Collect Data')
     elif args.mode == 'demo':
-        assert args.svm is not None, 'you have to provide --svm'
+        assert args.classifier is not None, 'you have to provide --classifier'
         run_layout(FacialExpressionRecognizerLayout,
                    title='Facial Expression Recognizer',
-                   svm_path=args.svm)
+                   clf_path=args.classifier)
