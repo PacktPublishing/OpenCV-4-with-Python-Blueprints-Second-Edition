@@ -1,11 +1,8 @@
-opencv-python==4.1.0.25
-opencv-contrib-python==4.1.0.25
-numpy==1.17.0
-scipy==1.3.1
-matplotlib==3.0.3
-wxPython==4.0.4
+wxPython==4.0.7
+numpy==1.18.1
+scipy==1.4.1
+matplotlib==3.1.2
 # pyFreenet3 , not sure for what is this for yet
-flake8==3.7.7
-autopep8==1.4.4
-tensorflow==2.0.0rc0
+# flake8==3.7.7
+# autopep8==1.4.4
 requests==2.22.0

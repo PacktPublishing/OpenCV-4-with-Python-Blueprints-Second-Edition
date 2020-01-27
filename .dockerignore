@@ -1,0 +1,13 @@
+.git/
+.py2.7-cv-blueprints/
+.py3.6-cv-blueprints/
+.py3.7-cv-blueprints/
+.py3.8-cv-blueprints/
+
+chapter6/data/GTSRB*
+
+.idea/
+.tmp/
+.gitignore
+.ipynb_checkpoints
+__pycache__/
