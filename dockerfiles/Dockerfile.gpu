@@ -65,9 +65,9 @@ RUN cd /opencv-${OPENCV_VERSION}/cmake_binary \
 && make install \
 && rm /cv.zip /contrib.zip \
 && rm -r /opencv-${OPENCV_VERSION} /opencv_contrib-${OPENCV_VERSION}
-RUN ln -s \
-  /usr/local/python/cv2/python-$PYTHON_VERSION/cv2.cpython-37m-x86_64-linux-gnu.so \
-  /usr/local/lib/python$PYTHON_VERSION/site-packages/cv2.so
+#RUN ln -s \
+#  /usr/local/python/cv2/python-$PYTHON_VERSION/cv2.cpython-37m-x86_64-linux-gnu.so \
+#  /usr/local/lib/python$PYTHON_VERSION/site-packages/cv2.so
 
 RUN apt-get update && apt-get install -y libgtk-3-dev
 RUN pip install pathlib2
@@ -76,6 +76,6 @@ RUN pip install wxPython==4.0.5
 
 COPY . /app
 WORKDIR /app
-RUN pip install -r requirements.txt
+#RUN pip install -r requirements.txt
 
 CMD bash
