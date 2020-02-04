@@ -35,7 +35,7 @@ class FeatureMatching:
         application, you will need to acquire a SURF license.
     """
 
-    def __init__(self, train_image: str = "train.png") -> None:
+    def __init__(self, train_image: np.ndarray):
         """
         Initialize the SURF descriptor, FLANN matcher, and the tracking
         algorithm.
@@ -47,8 +47,7 @@ class FeatureMatching:
         self.f_extractor = cv2.xfeatures2d_SURF.create(hessianThreshold=400)
         # template image: "train" image
         # later on compared ot each video frame: "query" image
-        self.img_obj = cv2.imread(train_image, cv2.CV_8UC1)
-        assert self.img_obj is not None, f"Could not find train image {train_image}"
+        self.img_obj = train_image
 
         self.sh_train = self.img_obj.shape[:2]
         self.key_train, self.desc_train = \
@@ -157,7 +156,6 @@ class FeatureMatching:
             if recent and not similar:
                 raise Outlier("Not similar transformation")
         except Outlier as e:
-            print(f"Outlier:{e}")
             self.num_frames_no_success += 1
             return False, None, None
         else:
