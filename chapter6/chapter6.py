@@ -78,7 +78,7 @@ def main(labels=[0, 10, 20, 30, 40]):
 
     accuracies = {}
 
-    for featurize in [hog_featurize, grayscale_featurize, hsv_featurize, surf_featurize, rgb_featurize]:
+    for featurize in [hog_featurize, grayscale_featurize, hsv_featurize, surf_featurize]:
         x_train = featurize(train_data)
         print(x_train.shape)
         model = train_one_vs_all_SVM(x_train, y_train)
@@ -90,6 +90,8 @@ def main(labels=[0, 10, 20, 30, 40]):
         np.save('y_true', y_test)
         accuracies[featurize.__name__] = accuracy(y_predict, y_test)
 
+    print(accuracies)
+
     plt.bar(accuracies.keys(), accuracies.values())
     plt.axes().xaxis.set_tick_params(rotation=20)
     plt.ylim([0, 1])
@@ -99,4 +101,4 @@ def main(labels=[0, 10, 20, 30, 40]):
 
 
 if __name__ == '__main__':
-    main(labels=None)
+    main()

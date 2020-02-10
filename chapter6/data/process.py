@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import itertools
 
 
 def hog_featurize(data, *, scale_size=(32, 32)):
@@ -25,11 +26,13 @@ def hog_featurize(data, *, scale_size=(32, 32)):
 
 
 def surf_featurize(data, *, scale_size=(16, 16), num_surf_features=100):
-    feature_detecctor = cv2.FastFeatureDetector_create()
-    kp = feature_detecctor.detect(np.zeros(scale_size).astype(np.uint8))
+    all_kp = [cv2.KeyPoint(float(x), float(y), 1)
+              for x, y in itertools.product(range(scale_size[0]),
+                                            range(scale_size[1]))]
     surf = cv2.xfeatures2d_SURF.create(hessianThreshold=400)
-    kp_des = (surf.compute(x, kp) for x in data)
-    return [d[1][:num_surf_features, :] for d in kp_des]
+    kp_des = (surf.compute(x, all_kp) for x in data)
+    return np.array([d.flatten()[:num_surf_features]
+                     for _, d in kp_des]).astype(np.float32)
 
 
 def hsv_featurize(data, *, scale_size=(16, 16)):
