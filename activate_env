@@ -1,2 +1,0 @@
-source .py3.7-cv-blueprints/bin/activate
-export PYTHONPATH=.
