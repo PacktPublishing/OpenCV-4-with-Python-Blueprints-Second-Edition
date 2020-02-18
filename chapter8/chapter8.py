@@ -4,7 +4,7 @@
 
 """
 OpenCV with Python Blueprints
-Chapter 7: Learning to Recognize Emotion in Faces
+Chapter 8: Learning to Recognize Emotion in Faces
 
     An app that combines both face detection and face recognition, with a
     focus on recognizing emotional expressions in the detected faces.
