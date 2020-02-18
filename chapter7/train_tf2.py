@@ -40,7 +40,7 @@ def train_tf_model(X_train, y_train):
     model.compile(optimizer='adam',
                   loss='sparse_categorical_crossentropy',
                   metrics=['accuracy'])
-    model.fit(x_train, train_labels, epochs=10)
+    model.fit(x_train, np.array(train_labels), epochs=2)
     return model
 
 
@@ -52,10 +52,7 @@ if __name__ == '__main__':
     model = train_tf_model(x_train, train_labels)
     x_test = np.array([normalize(x) for x in test_data])
 
-    for i in range(10):
-        model.fit(x_train, train_labels, epochs=1)
+    y_hat = model.predict_classes(x_test)
 
-        y_hat = model.predict_classes(x_test)
-
-        acc = sum(y_hat == np.array(test_labels)) / len(test_labels)
-        print(f'Accuracy[{i}] = {acc:.3f}')
+    acc = sum(y_hat == np.array(test_labels)) / len(test_labels)
+    print(f'Accuracy[{i}] = {acc:.3f}')

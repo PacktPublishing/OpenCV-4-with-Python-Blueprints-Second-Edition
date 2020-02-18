@@ -78,7 +78,8 @@ def main(labels=[0, 10, 20, 30, 40]):
 
     accuracies = {}
 
-    for featurize in [hog_featurize, grayscale_featurize, hsv_featurize, surf_featurize]:
+    for featurize in [hog_featurize, grayscale_featurize,
+                      hsv_featurize, surf_featurize]:
         x_train = featurize(train_data)
         print(x_train.shape)
         model = train_one_vs_all_SVM(x_train, y_train)
