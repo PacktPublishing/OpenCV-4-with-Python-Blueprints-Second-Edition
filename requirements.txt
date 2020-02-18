@@ -1,8 +1,8 @@
-wxPython==4.0.7
+wxPython==4.0.5
 numpy==1.18.1
 scipy==1.4.1
 matplotlib==3.1.2
-# pyFreenet3 , not sure for what is this for yet
-# flake8==3.7.7
-# autopep8==1.4.4
 requests==2.22.0
+opencv-contrib-python==4.2.0.32
+opencv-python==4.2.0.32
+rawpy==0.14.0
