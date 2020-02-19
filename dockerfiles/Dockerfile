@@ -79,16 +79,9 @@ RUN ln -s \
   /usr/local/python/cv2/python-3.8/cv2.cpython-38m-x86_64-linux-gnu.so \
   /usr/local/lib/python3.8/site-packages/cv2.so
 
+RUN pip install --upgrade pip && pip install --no-cache-dir pathlib2 wxPython==4.0.5
 
-RUN pip install --upgrade pip && pip install --no-cache-dir pathlib2
-RUN pip install --upgrade pip && pip install --no-cache-dir wxPython==4.0.5
+RUN pip install --upgrade pip && pip install --no-cache-dir scipy==1.4.1 matplotlib==3.1.2 requests==2.22.0 ipython numba==0.48.0 jupyterlab==1.2.6 rawpy==0.14.0  # Rawpy is required for HDR & Panorama (processing .CR2 files)
 
-RUN pip install --upgrade pip && pip install --no-cache-dir scipy==1.4.1 matplotlib==3.1.2 requests==2.22.0
 
-RUN pip install rawpy==0.14.0  # HDR & Panorama (processing .CR2 files)
-RUN pip install ipython
-
-RUN apt-get update && apt-get install -y \
-        zsh
-
-CMD zsh
+CMD bash
