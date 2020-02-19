@@ -55,4 +55,4 @@ if __name__ == '__main__':
     y_hat = model.predict_classes(x_test)
 
     acc = sum(y_hat == np.array(test_labels)) / len(test_labels)
-    print(f'Accuracy[{i}] = {acc:.3f}')
+    print(f'Accuracy = {acc:.3f}')
