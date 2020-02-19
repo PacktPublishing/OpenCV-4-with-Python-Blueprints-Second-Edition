@@ -1,13 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
 OpenCV with Python Blueprints
-Chapter 6: Learning to Recognize Traffic Signs
+Chapter 7: Learning to Recognize Traffic Signs
 
 Traffic sign recognition using support vector machines (SVMs).
-SVMs are extended for multi-class classification using the "one-vs-one"
-and "one-vs-all" strategies.
 """
 
 import cv2
