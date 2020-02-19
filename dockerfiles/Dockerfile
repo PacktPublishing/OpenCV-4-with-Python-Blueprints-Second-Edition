@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y \
         libavformat-dev \
         libpq-dev \
         libgtk2.0-dev \
-        # Optional 
+        # Optional
         libtbb2 libtbb-dev \
         libjpeg-dev \
         libpng-dev \
@@ -66,10 +66,10 @@ RUN cd /opencv-${OPENCV_VERSION}/cmake_binary \
         -DCMAKE_BUILD_TYPE=RELEASE \
         -D OPENCV_EXTRA_MODULES_PATH=/opencv_contrib-${OPENCV_VERSION}/modules \
         -D OPENCV_ENABLE_NONFREE=ON \
-        -DCMAKE_INSTALL_PREFIX=$(python3.8 -c "import sys; print(sys.prefix)") \
-        -DPYTHON_EXECUTABLE=$(which python3.8) \
-        -DPYTHON_INCLUDE_DIR=$(python3.8 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
-        -DPYTHON_PACKAGES_PATH=$(python3.8 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") \
+        -DCMAKE_INSTALL_PREFIX=$(python -c "import sys; print(sys.prefix)") \
+        -DPYTHON_EXECUTABLE=$(which python) \
+        -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+        -DPYTHON_PACKAGES_PATH=$(python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") \
         .. \
     && make install \
     && rm /cv.zip /contrib.zip \
@@ -92,4 +92,3 @@ RUN apt-get update && apt-get install -y \
         zsh
 
 CMD zsh
-
