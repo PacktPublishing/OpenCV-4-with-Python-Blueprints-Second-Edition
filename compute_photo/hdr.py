@@ -4,9 +4,9 @@ import numpy as np
 from pathlib import Path
 from matplotlib import pyplot as plt
 import cv2
+from .common import load_image
 
 import exifread
-import rawpy
 
 '''
 https://docs.opencv.org/4.2.0/d2/df0/tutorial_py_hdr.html
@@ -19,14 +19,6 @@ def thumbnail(img_rgb, long_edge=400):
     print('dimensions', dimensions)
     return cv2.resize(img_rgb, dimensions, interpolation=cv2.INTER_AREA)
 
-
-def load_image(path, bps=16):
-    if path.suffix == '.CR2':
-        with rawpy.imread(str(path)) as raw:
-            data = raw.postprocess(no_auto_bright=True, output_bps=bps)
-        return cv2.cvtColor(data, cv2.cv2.COLOR_RGB2BGR)
-    else:
-        return cv2.imread(str(path))
 
 
 def exposure_strength(path):
