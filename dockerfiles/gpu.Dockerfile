@@ -1,10 +1,4 @@
-#FROM tensorflow/tensorflow:latest-py3
-
-# FROM tensorflow/tensorflow:latest-gpu-py3
-# https://github.com/tensorflow/tensorflow/tree/master/tensorflow/tools/dockerfiles/dockerfiles
-
-FROM python:3.8
-
+FROM tensorflow/tensorflow:2.1.0-gpu-py3
 RUN apt-get update && apt-get install -y \
         build-essential \
         cmake \
@@ -75,9 +69,9 @@ RUN cd /opencv-${OPENCV_VERSION}/cmake_binary \
     && rm /cv.zip /contrib.zip \
     && rm -r /opencv-${OPENCV_VERSION} /opencv_contrib-${OPENCV_VERSION}
 
-RUN ln -s \
-  /usr/local/python/cv2/python-3.8/cv2.cpython-38m-x86_64-linux-gnu.so \
-  /usr/local/lib/python3.8/site-packages/cv2.so
+# RUN ln -s \
+#   /usr/local/python/cv2/python-3.8/cv2.cpython-38m-x86_64-linux-gnu.so \
+#   /usr/local/lib/python3.8/site-packages/cv2.so
 
 RUN pip install --upgrade pip && pip install --no-cache-dir pathlib2 wxPython==4.0.5
 
