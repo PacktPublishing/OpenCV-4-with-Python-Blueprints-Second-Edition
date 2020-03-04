@@ -1,16 +1,16 @@
 import argparse
 from matplotlib import cm
+import itertools
 import numpy as np
 from pathlib import Path
 from matplotlib import pyplot as plt
 import cv2
+from common import load_image
 
 import exifread
-import rawpy
 
-'''
-https://docs.opencv.org/4.2.0/d2/df0/tutorial_py_hdr.html
-'''
+
+MARKERS = ['o', '+', 'x', '*', '.', 'X', '1', 'v', 'D']
 
 
 def thumbnail(img_rgb, long_edge=400):
@@ -20,26 +20,17 @@ def thumbnail(img_rgb, long_edge=400):
     return cv2.resize(img_rgb, dimensions, interpolation=cv2.INTER_AREA)
 
 
-def load_image(path, bps=16):
-    if path.suffix == '.CR2':
-        with rawpy.imread(str(path)) as raw:
-            data = raw.postprocess(no_auto_bright=True, output_bps=bps)
-        return cv2.cvtColor(data, cv2.cv2.COLOR_RGB2BGR)
-    else:
-        return cv2.imread(str(path))
-
-
-def exposure_strength(path):
+def exposure_strength(path, iso_ref=100, f_stop_ref=6.375):
     with open(path, 'rb') as infile:
         tags = exifread.process_file(infile)
     [f_stop] = tags['EXIF ApertureValue'].values
     [iso_speed] = tags['EXIF ISOSpeedRatings'].values
     [exposure_time] = tags['EXIF ExposureTime'].values
 
-    aperture_area = 1 / (f_stop.num / f_stop.den) ** 2
+    rel_aperture_area = 1 / (f_stop.num / f_stop.den / f_stop_ref) ** 2
     exposure_time_float = exposure_time.num / exposure_time.den
 
-    score = aperture_area * exposure_time_float * iso_speed
+    score = rel_aperture_area * exposure_time_float * iso_speed / iso_ref
     return score, np.log2(score)
 
 
@@ -59,12 +50,15 @@ def lowe_match(descriptors1, descriptors2):
 def save_8bit(img, name):
     img_8bit = np.clip(img * 255, 0, 255).astype('uint8')
     cv2.imwrite(name, img_8bit)
+    return img_8bit
 
 
-def plot_and_show_crf(crf, colors='bgr'):
-    for i, c in zip(range(crf.shape[2]), colors):
+OPEN_CV_COLORS = 'bgr'
+
+
+def plot_crf(crf, colors=OPEN_CV_COLORS):
+    for i, c in enumerate(colors):
         plt.plot(crf_debevec[:, 0, i], color=c)
-    plt.show()
 
 
 if __name__ == '__main__':
@@ -73,26 +67,65 @@ if __name__ == '__main__':
     img_group.add_argument('--image-dir', type=Path)
     img_group.add_argument('--images', type=Path, nargs='+')
     parser.add_argument('--show-steps', action='store_true')
+    parser.add_argument('--random-seed', type=int, default=43)
+    parser.add_argument('--num-pixels', type=int, default=100)
     parser.add_argument('--align-images', action='store_true')
+    parser.add_argument('--debug-color', choices=OPEN_CV_COLORS, default='g')
     args = parser.parse_args()
 
     if args.image_dir:
         args.images = sorted(args.image_dir.iterdir())
 
-    images = [load_image(p) for p in args.images]
+    args.color_i = OPEN_CV_COLORS.find(args.debug_color)
+
+    images = [load_image(p, bps=8) for p in args.images]
     times = [exposure_strength(p)[0] for p in args.images]
     times_array = np.array(times, dtype=np.float32)
+    print('times', times_array)
 
-    cal_debevec = cv2.createCalibrateDebevec()
+    if args.show_steps:
+        np.random.seed(args.random_seed)
+        pixels = list(zip(
+            np.random.randint(0, high=images[0].shape[0] - 1, size=args.num_pixels),
+            np.random.randint(0, high=images[1].shape[0] - 1, size=args.num_pixels)))
+        print('pixels', pixels)
+
+        log_ts = [np.log2(t) for t in times]
+
+        pixel_values = {}
+        for (i, j), marker in zip(pixels, MARKERS):
+            pixel_values[(i, j)] = [img[i, j, args.color_i] for img in images]
+            plt.scatter(pixel_values[(i, j)], log_ts, marker=marker,
+                        label=f'Pixel [{i}, {j}]')
+        plt.xlabel('Output Pixel value (8-bit)')
+        plt.ylabel('log exposure')
+        plt.legend()
+        plt.show()
+
+    cal_debevec = cv2.createCalibrateDebevec(samples=1000)
     crf_debevec = cal_debevec.process(images, times=times_array)
-    plot_and_show_crf(crf_debevec)
+
+    plot_crf(crf_debevec)
+    plt.show()
 
     merge_debevec = cv2.createMergeDebevec()
-    hdr_debevec = merge_debevec.process(images, times=times_array.copy())
+    hdr_debevec = merge_debevec.process(images, times=times_array.copy(), response=crf_debevec)
+
+    print(hdr_debevec)
+    if args.show_steps:
+        print([hdr_debevec[i, j, args.color_i] for i, j in pixels])
+        for (i, j), marker in zip(pixels, MARKERS):
+            e = hdr_debevec[i, j, args.color_i]
+            plt.scatter(np.array(log_ts) + np.log(e), pixel_values[(i, j)],
+                        marker=marker,
+                        label=f'Pixel [{i}, {j}]')
+        plt.show()
     # Tonemap HDR image
     tonemap1 = cv2.createTonemap(gamma=2.2)
     res_debevec = tonemap1.process(hdr_debevec.copy())
-    save_8bit(res_debevec, 'res_debevec.jpg')
+    x = save_8bit(res_debevec, 'res_debevec.jpg')
+    plt.imshow(x)
+    plt.show()
 
     merge_robertson = cv2.createMergeRobertson()
     hdr_robertson = merge_robertson.process(images, times=times_array.copy())
