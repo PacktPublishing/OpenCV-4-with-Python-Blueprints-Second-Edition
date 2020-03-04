@@ -11,7 +11,6 @@
 
 
 import cv2
-import freenect
 import numpy as np
 from typing import Tuple
 from gestures import recognize
