@@ -29,11 +29,8 @@ import wx
 from pathlib import Path
 
 from data.store import save_datum, pickle_load
-from data.process import featurize
 from data.process import _pca_featurize
 from detectors import FaceDetector
-from classifiers import MultiLayerPerceptron
-from gui import BaseLayout as OldBaseLayout
 from wx_gui import BaseLayout
 
 

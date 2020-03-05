@@ -18,11 +18,12 @@ def parse_args():
     return args
 
 
-def largest_connected_subset(feature_extractor, images):
-    matcher = cv2.detail.BestOf2NearestMatcher_create(False, 0.6)
+def largest_connected_subset(images):
+    finder = cv2.xfeatures2d_SURF.create()
     all_img_features = [cv2.detail.computeImageFeatures2(finder, img)
                         for img in images]
 
+    matcher = cv2.detail.BestOf2NearestMatcher_create(False, 0.6)
     pair_matches = matcher.apply2(all_img_features)
     matcher.collectGarbage()
 
@@ -71,9 +72,8 @@ if __name__ == '__main__':
     args = parse_args()
     all_images = [load_image(p, bps=8) for p in args.images]
 
-    finder = cv2.xfeatures2d_SURF.create()
 
-    conn_images, features, p = largest_connected_subset(finder, all_images)
+    conn_images, features, p = largest_connected_subset(all_images)
 
     cameras = find_camera_parameters(features, p)
 
@@ -116,16 +116,16 @@ if __name__ == '__main__':
         stitch_corners.append(roi[0:2])
         stitch_sizes.append(roi[2:4])
 
-    dst_sz = cv2.detail.resultRoi(corners=stitch_corners,
-                                  sizes=stitch_sizes)
+    canvas_size = cv2.detail.resultRoi(corners=stitch_corners,
+                                       sizes=stitch_sizes)
 
-    blend_width = np.sqrt(dst_sz[2] * dst_sz[3]) * 5 / 100
+    blend_width = np.sqrt(canvas_size[2] * canvas_size[3]) * 5 / 100
     if blend_width < 1:
         blender = cv2.detail.Blender_createDefault(cv2.detail.Blender_NO)
     else:
         blender = cv2.detail_MultiBandBlender()
         blender.setNumBands((np.log(blend_width) / np.log(2.) - 1.).astype(np.int))
-    blender.prepare(dst_sz)
+    blender.prepare(canvas_size)
 
     for i, img in enumerate(conn_images):
 

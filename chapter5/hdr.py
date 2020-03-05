@@ -85,40 +85,49 @@ if __name__ == '__main__':
 
     if args.show_steps:
         np.random.seed(args.random_seed)
-        pixels = list(zip(
-            np.random.randint(0, high=images[0].shape[0] - 1, size=args.num_pixels),
-            np.random.randint(0, high=images[1].shape[0] - 1, size=args.num_pixels)))
-        print('pixels', pixels)
+        pixel_values = {}
+        while len(pixel_values) < args.num_pixels:
+            i = np.random.randint(0, high=images[0].shape[0] - 1)
+            j = np.random.randint(0, high=images[0].shape[1] - 1)
+
+            new_val = images[0][i, j, args.color_i]
+            good_pixel = True
+            for vv in pixel_values.values():
+                if np.abs(vv[0].astype(int) - new_val.astype(int)) < 100 // args.num_pixels:
+                    good_pixel = False
+                    break
+
+            if good_pixel:
+                pixel_values[(i, j)] = [img[i, j, args.color_i] for img in images]
 
         log_ts = [np.log2(t) for t in times]
 
-        pixel_values = {}
-        for (i, j), marker in zip(pixels, MARKERS):
-            pixel_values[(i, j)] = [img[i, j, args.color_i] for img in images]
-            plt.scatter(pixel_values[(i, j)], log_ts, marker=marker,
-                        label=f'Pixel [{i}, {j}]')
+        for [(i, j), vv], marker in zip(pixel_values.items(), MARKERS):
+            plt.scatter(vv, log_ts, marker=marker, label=f'Pixel [{i}, {j}]')
         plt.xlabel('Output Pixel value (8-bit)')
         plt.ylabel('log exposure')
         plt.legend()
         plt.show()
 
-    cal_debevec = cv2.createCalibrateDebevec(samples=1000)
+    cal_debevec = cv2.createCalibrateDebevec(samples=200)
+    print('Calibrated Debevec')
     crf_debevec = cal_debevec.process(images, times=times_array)
-
-    plot_crf(crf_debevec)
-    plt.show()
 
     merge_debevec = cv2.createMergeDebevec()
     hdr_debevec = merge_debevec.process(images, times=times_array.copy(), response=crf_debevec)
 
-    print(hdr_debevec)
+    print("merged")
+
     if args.show_steps:
-        print([hdr_debevec[i, j, args.color_i] for i, j in pixels])
-        for (i, j), marker in zip(pixels, MARKERS):
+        for [(i, j), vv], marker in zip(pixel_values.items(), MARKERS):
             e = hdr_debevec[i, j, args.color_i]
-            plt.scatter(np.array(log_ts) + np.log(e), pixel_values[(i, j)],
+            plt.scatter(vv, np.array(log_ts) + np.log(e) + 1.6,
                         marker=marker,
                         label=f'Pixel [{i}, {j}]')
+        plt.plot(np.log(crf_debevec[:, 0, args.color_i]),
+                 color=OPEN_CV_COLORS[args.color_i])
+        plt.tight_layout()
+        plt.legend()
         plt.show()
     # Tonemap HDR image
     tonemap1 = cv2.createTonemap(gamma=2.2)
