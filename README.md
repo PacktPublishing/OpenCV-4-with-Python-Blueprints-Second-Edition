@@ -90,49 +90,36 @@ applications.
 
 ## Software Requirements
 
-## wxPython for demos
-
-- Ubuntu
-```
-sudo apt install libjpeg-dev libtiff-dev libsdl2-dev libgstreamer-plugins-base1.0-dev libnotify-dev freeglut3 freeglut3-dev libsm-dev libsm-dev libwebkit2gtk-4.0-dev libxtst-dev
-```
-
-## OLD Software Requirements
+##  Software Requirements
 All projects can run on Windows, Mac, or Linux, and require the following software packages:
-* OpenCV 2.4.9 or later: Recent 32-bit and 64-bit versions as well as installation instructions are available at
+* OpenCV 4.2 or later: Recent 32-bit and 64-bit versions as well as installation instructions are available at
 http://opencv.org/downloads.html. Platform-specific installation instructions can be found at
 http://docs.opencv.org/doc/tutorials/introduction/table_of_content_introduction/table_of_content_introduction.html.
-* Python 2.7 or later: Recent 32-bit and 64-bit installers are available at https://www.python.org/downloads. The
+* Python 3.8 or later: Recent 32-bit and 64-bit installers are available at https://www.python.org/downloads. The
 installation instructions can be found at https://wiki.python.org/moin/BeginnersGuide/Download.
-* NumPy 1.9.2 or later: This package for scientific computing officially comes in 32-bit format only, and can be
+* NumPy 1.18.1 or later: This package for scientific computing officially comes in 32-bit format only, and can be
 obtained from http://www.scipy.org/scipylib/download.html. The installation instructions can be found at
 http://www.scipy.org/scipylib/building/index.html#building.
 
 In addition, some chapters require the following free Python modules:
-* wxPython 2.8 or later (Chapters 1 to 4, 7): This GUI programming toolkit can be obtained from
+* wxPython 4.0 or later (Chapters 1 to 4, 8): This GUI programming toolkit can be obtained from
   http://www.wxpython.org/download.php.
-  Its installation instructions are given at http://wxpython.org/builddoc.php.
-  If you are using Max OS 10.11 (El Capitan), try:
-
-  ```
-  $ sudo pip install --upgrade --trusted-host wxpython.org --pre -f http://wxpython.org/Phoenix/snapshot-builds/ wxPython_Phoenix
-  ```
-
-  See [this bug](https://github.com/mbeyeler/opencv-python-blueprints/issues/9) for context.
-  Thanks to @KaroAntonio for the fix!
-* matplotlib 1.4.3 or later (Chapters 4 to 7): This 2D plotting library can be obtained from
+* matplotlib 3.1 or later (Chapters 4, 5, 6, and 7): This 2D plotting library can be obtained from
   http://matplotlib.org/downloads.html. Its installation instructions can be found by going to
   http://matplotlib.org/faq/installing_faq.html#how-to-install.
-* SciPy 0.16.0 or later (Chapter 1): This scientific Python library officially comes in 32-bit only, and can be
+* SciPy 1.4 or later (Chapter 1 and 10): This scientific Python library officially comes in 32-bit only, and can be
   obtained from http://www.scipy.org/scipylib/download.html. The installation instructions can be found at
   http://www.scipy.org/scipylib/building/index.html#building.
-* libfreenect 0.5.2 or later (Chapter 2): The libfreenect module by the OpenKinect project (http://www.openkinect.org)
-  provides drivers and libraries for the Microsoft Kinect hardware, and can be obtained from
-  https://github.com/OpenKinect/libfreenect. Its installation instructions can be found at
-  http://openkinect.org/wiki/Getting_Started.
+* rawpy 0.14 and ExifRead==2.1.2 (Chapter 5)
+* requests==2.22.0 to download data in chapter 7
 
 Furthermore, the use of iPython (http://ipython.org/install.html) is highly recommended as it provides a flexible,
 interactive console interface.
+
+For full list of requirements for the entire book refer to the requirements.txt file found in this repository. Which can be installed via pip using
+```
+pip install -r requirements.txt
+```
 
 ## License
 The software is released under the GNU General Public License (GPL), which is the most commonly used free software
