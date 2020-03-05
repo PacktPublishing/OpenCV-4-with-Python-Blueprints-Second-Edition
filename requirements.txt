@@ -6,3 +6,4 @@ requests==2.22.0
 opencv-contrib-python==4.2.0.32
 opencv-python==4.2.0.32
 rawpy==0.14.0
+ExifRead==2.1.2
