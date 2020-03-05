@@ -40,7 +40,7 @@ Or use the following bibtex:
 }
 ```
 
-Scholarly work referencing this book:
+Scholarly work referencing first edition of the book:
 - B Zhang et al. (2018). Automatic matching of construction onsite resources under camera views. *Automation in Construction*.
 - A Jakubović & J Velagić (2018). Image Feature Matching and Object Detection Using Brute-Force Matchers. *International Symposium ELMAR*.
 - B Zhang et al. (2018). Multi-View Matching for Onsite Construction Resources with Combinatorial Optimization. *International Symposium on Automation and Robotics in Construction (ISARC)* 35:1-7.
@@ -50,14 +50,13 @@ Scholarly work referencing this book:
 - Y Güçlütürk et al. (2016). Convolutional sketch inversion. *European Conference on Computer Vision (ECCV)* 810-824.
 
 
-All code was tested with OpenCV 2.4.9 and Python 2.7 on Ubuntu 14.04 and Windows 8.1, and is available from:
-https://github.com/mbeyeler/opencv-python-blueprints.
+All code was tested with OpenCV 4.2.0 and Python 3.8 on Ubuntu 18.04, and is available from:
+https://github.com/PacktPublishing/OpenCV-4-with-Python-Blueprints-Second-Edition/
 
-For questions, discussions, and more detailed help please refer to the Google group:
-https://groups.google.com/d/forum/opencv-python-blueprints
+We have also created a Docker file in https://github.com/PacktPublishing/OpenCV-4-with-Python-Blueprints-Second-Edition/tree/master/dockerfiles/Dockerfile which has README.md that will help you compile and run the code using the docker file.
 
 
-## Critical Reception
+## Critical Reception (First Edition)
 
 <img src="https://3.bp.blogspot.com/-m8yl8xCrM3Q/V9yFYMAj3YI/AAAAAAAAAq8/5IzGqAeUp9cCwq13j1EL7aunfUvvre5bQCLcB/s640/opencv-python-blueprints-amazon-new.png" style="width: 70%; margin-left: 15%"/>
 
@@ -77,8 +76,6 @@ What readers on Amazon have to say:
 > manner with a few dry jokes here and there. Can only recommend! <br/>
 &ndash; lakesouth
 
-
-
 ## Who This Book Is for
 As part of Packt's Blueprints series, this book is for intermediate users of OpenCV who aim to master their skills
 by developing advanced practical applications. You should already have some
@@ -91,15 +88,7 @@ experience will allow you to develop your own advanced computer vision
 applications.
 
 
-
 ## Software Requirements
-
-We are using python3.7 (to be upgraded to 3.8)
-
-```
-make
-source .py3.7-cv-blueprints/bin/activate
-```
 
 ## wxPython for demos
 
