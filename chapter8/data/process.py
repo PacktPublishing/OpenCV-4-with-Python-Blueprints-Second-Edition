@@ -54,8 +54,8 @@ def _pca_featurize(data, center, top_vecs):
                      for datum in data]).astype(np.float32)
 
 
-def pca_featurize(trainig_data, *, num_components=20):
-    x_arr = np.array(trainig_data).reshape((len(trainig_data), -1)).astype(np.float32)
+def pca_featurize(training_data, *, num_components=20):
+    x_arr = np.array(training_data).reshape((len(training_data), -1)).astype(np.float32)
     mean, eigvecs = cv2.PCACompute(x_arr, mean=None)
 
     # Take only first num_components eigenvectors.
@@ -63,7 +63,7 @@ def pca_featurize(trainig_data, *, num_components=20):
     center = mean.flatten()
 
     args = (center, top_vecs)
-    return _pca_featurize(trainig_data, *args), args
+    return _pca_featurize(training_data, *args), args
 
 
 if __name__ == '__main__':

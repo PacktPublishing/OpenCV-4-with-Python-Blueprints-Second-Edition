@@ -48,7 +48,7 @@ class FacialExpressionRecognizerLayout(BaseLayout):
             face_cascade='params/haarcascade_frontalface_default.xml',
             eye_cascade='params/haarcascade_lefteye_2splits.xml')
 
-    def featruize_head(self, head):
+    def featurize_head(self, head):
         return _pca_featurize(head[None], *self.pca_args)
 
     def augment_layout(self):
@@ -65,7 +65,7 @@ class FacialExpressionRecognizerLayout(BaseLayout):
             return frame
 
         # We have to pass [1 x n] array predict.
-        _, output = self.clf.predict(self.featruize_head(head))
+        _, output = self.clf.predict(self.featurize_head(head))
         label = self.index_to_label[np.argmax(output)]
 
         # Draw predicted label above the bounding box.
