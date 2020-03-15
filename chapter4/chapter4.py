@@ -38,7 +38,7 @@ def main():
     # scene.draw_epipolar_lines()
     # scene.plot_rectified_images()
     scene.plot_optic_flow()
-    # scene.plot_point_cloud()
+    scene.plot_point_cloud()
 
 
 if __name__ == '__main__':

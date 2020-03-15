@@ -231,6 +231,7 @@ class SceneReconstruction3D:
     def _extract_keypoints_sift(self):
         """Extracts keypoints via sift descriptors"""
         # extract keypoints and descriptors from both images
+        # detector = cv2.xfeatures2d.SIFT_create(contrastThreshold=0.11, edgeThreshold=10)
         detector = cv2.xfeatures2d.SIFT_create()
         first_key_points, first_desc = detector.detectAndCompute(self.img1,
                                                                  None)
@@ -301,6 +302,8 @@ class SceneReconstruction3D:
         # front of both cameras
 
         R = T = None
+        R = U.dot(W.T).dot(Vt)
+        T = U[:, 2]
         for r in (U.dot(W).dot(Vt), U.dot(W.T).dot(Vt)):
             for t in (U[:, 2], -U[:, 2]):
                 if self._in_front_of_both_cameras(
@@ -335,6 +338,7 @@ class SceneReconstruction3D:
                                   trans):
         """Determines whether point correspondences are in front of both
            images"""
+        print("start")
         rot_inv = rot
         for first, second in zip(first_points, second_points):
             first_z = np.dot(rot[0, :] - second[0] * rot[2, :],
@@ -345,6 +349,7 @@ class SceneReconstruction3D:
             second_3d_point = np.dot(rot.T, first_3d_point) - np.dot(rot.T,
                                                                      trans)
 
+            print(first_3d_point,second_3d_point)
             if first_3d_point[2] < 0 or second_3d_point[2] < 0:
                 return False
 

@@ -30,8 +30,9 @@ class CameraCalibration(BaseLayout):
         self.panels_vertical.Add(pnl, flag=wx.EXPAND | wx.BOTTOM | wx.TOP,
                                  border=1)
 
-        # setting chessboard size
-        self.chessboard_size = (9, 6)
+        # setting chessboard size (size of grid - 1)
+        # (7,7) for the standard chessboard
+        self.chessboard_size = (7, 7)
 
         # prepare object points
         self.objp = np.zeros((np.prod(self.chessboard_size), 3),

@@ -14,15 +14,7 @@ import cv2
 import numpy as np
 from typing import Tuple
 from gestures import recognize
-
-
-def read_frame() -> Tuple[bool,np.ndarray]:
-    frame, timestamp = freenect.sync_get_depth()
-    if frame is None:
-        return False, None
-    frame = np.clip(frame, 0, 2**10 - 1)
-    frame >>= 2
-    return True, frame.astype(np.uint8)
+from frame_reader import read_frame
 
 
 def draw_helpers(img_draw: np.ndarray) -> None:
