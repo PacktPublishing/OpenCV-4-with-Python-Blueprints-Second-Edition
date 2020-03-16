@@ -136,15 +136,15 @@ if __name__ == '__main__':
     plt.imshow(x)
     plt.show()
 
-    merge_robertson = cv2.createMergeRobertson()
-    hdr_robertson = merge_robertson.process(images, times=times_array.copy())
-    print(hdr_robertson)
-    # Tonemap HDR image
-    tonemap1 = cv2.createTonemap(gamma=2.2)
-    res_robertson = tonemap1.process(hdr_robertson)
-    save_8bit(res_robertson, 'res_robertson.jpg')
+    if args.show_steps:
+        merge_robertson = cv2.createMergeRobertson()
+        hdr_robertson = merge_robertson.process(images, times=times_array.copy())
+        # Tonemap HDR image
+        tonemap1 = cv2.createTonemap(gamma=2.2)
+        res_robertson = tonemap1.process(hdr_robertson)
+        save_8bit(res_robertson, 'res_robertson.jpg')
 
-    # Exposure fusion using Mertens
-    merge_mertens = cv2.createMergeMertens()
-    res_mertens = merge_mertens.process(images)
-    save_8bit(res_mertens, 'res_mertens.jpg')
+        # Exposure fusion using Mertens
+        merge_mertens = cv2.createMergeMertens()
+        res_mertens = merge_mertens.process(images)
+        save_8bit(res_mertens, 'res_mertens.jpg')
