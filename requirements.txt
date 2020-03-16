@@ -6,4 +6,4 @@ opencv-contrib-python==4.2.0.32
 opencv-python==4.2.0.32
 rawpy==0.13.1
 ExifRead==2.1.2
-wxPython==4.0.5
+wheels/wxPython-4.0.7.post2-cp38-cp38-linux_x86_64.whl
