@@ -82,6 +82,7 @@ RUN ln -s \
 RUN pip install --upgrade pip && pip install --no-cache-dir pathlib2 wxPython==4.0.5
 
 RUN pip install --upgrade pip && pip install --no-cache-dir scipy==1.4.1 matplotlib==3.1.2 requests==2.22.0 ipython numba==0.48.0 jupyterlab==1.2.6 rawpy==0.14.0  # Rawpy is required for HDR & Panorama (processing .CR2 files)
+RUN pip install ExifRead==2.1.2
 
 
 CMD bash

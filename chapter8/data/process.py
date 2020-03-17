@@ -68,7 +68,7 @@ def pca_featurize(training_data, *, num_components=20):
 
 if __name__ == '__main__':
     print(train_test_split(10, 0.8))
-    from data.emotions import load_collected_data
+    from data.store import load_collected_data
     data, targets = load_collected_data('data/cropped_faces.csv')
     X, f = pca_featurize(data)
     print(X.shape)
