@@ -6,13 +6,14 @@
 
 This repository contains all up-to-date source code for the following book:
 
-<img src="https://2.bp.blogspot.com/-0kv2Un_wtT4/VlX2XOazp3I/AAAAAAAAACE/bmZ6AsPfRKY8D6Btr10SObc6QiD8Hi0bQ/s200/2690OS_OpenCV%2Bwith%2BPython%2BBlueprints_.jpg" align="left" style="width: 220px; margin-right: 5px"/>
-Michael Beyeler <br/>
-<a href="http://www.amazon.com/OpenCV-Python-Blueprints-Michael-Beyeler/dp/1785282697"><b>OpenCV with Python Blueprints: Design and develop advanced computer vision projects using OpenCV with Python</b></a>
+<img src="https://www.packtpub.com/media/catalog/product/cache/ecd051e9670bd57df35c8f0b122d8aea/9/7/9781789801811-original.png" align="left" width="200" style="margin-right: 5px"/>
+Dr. Menua Gevorgyan, Arsen Mamikonyan, Michael Beyeler <br/>
+<a href="https://www.packtpub.com/data/opencv-4-with-python-blueprints-second-edition"><b>OpenCV 4 with Python Blueprints - Second Edition</b></a> Build creative computer vision projects with the latest version of OpenCV 4 and Python 3
 
-Packt Publishing Ltd., London, England <br/>
-Paperback: 230 pages <br/>
-ISBN 978-178528269-0
+
+Packt Publishing Ltd. <br/>
+Paperback: 366 pages <br/>
+ISBN 978-178980-181-1
 <br clear="both"/>
 
 This book demonstrates how to develop a series of intermediate to advanced projects using OpenCV and Python,
@@ -24,19 +25,18 @@ and object categorization.
 By the end of this book, readers will be OpenCV experts whose newly gained experience allows them to develop their own advanced computer vision applications.
 
 If you use either book or code in a scholarly publication, please cite as:
-> M. Beyeler, (2015). OpenCV with Python Blueprints: Design and develop advanced computer vision projects using OpenCV with Python. Packt Publishing Ltd., London, England, 230 pages, ISBN 978-
-178528269-0.
+> Menua Gevorgyan, Arsen Mamikonyan, Michael Beyeler, (2020). OpenCV with Python Blueprints - Second Edition: Build creative computer vision projects with the latest version of OpenCV 4 and Python 3. Packt Publishing Ltd., London, England, 230 pages, ISBN 978-178980-181-1.
 
 Or use the following bibtex:
 ```
 @book{OpenCVWithPythonBlueprints,
 	title = {{OpenCV with Python Blueprints}},
-	subtitle = {Design and develop advanced computer vision projects using {OpenCV} with {Python}},
-	author = {Michael Beyeler},
-	year = {2015},
-	pages = {230},
+	subtitle = {Build creative computer vision projects with the latest version of {OpenCV 4} and {Python 3}},
+	author = {Menua Gevorgyan, Arsen Mamikonyan, Michael Beyeler},
+	year = {2020},
+	pages = {366},
 	publisher = {Packt Publishing Ltd.},
-	isbn = {978-178528269-0}
+	isbn = {978-178980-181-1}
 }
 ```
 
@@ -88,10 +88,63 @@ experience will allow you to develop your own advanced computer vision
 applications.
 
 
-## Software Requirements
+##  Getting Started
+All projects can run on Windows, Mac, or Linux. The required packages can be installed with pip or you can use the docker images available in the repository to run scripts of the chapters.
 
-##  Software Requirements
-All projects can run on Windows, Mac, or Linux, and require the following software packages:
+## Installation With Pip
+
+
+```
+pip install -r requirements.txt
+```
+
+## Runninning With Docker
+
+
+
+### Build the Image
+
+The repository contains two docker images:
+
+1. Without GPU acceleration
+```
+docker build -t book dockerfiles
+```
+2. With GPU (CUDA) acceleration
+```
+docker build -t book dockerfiles -f dockerfiles/gpu.Dockerfile
+```
+
+### Start a Container
+
+```
+docker run --device /dev/video0 --env DISPLAY=$DISPLAY  -v="/tmp/.X11-unix:/tmp/.X11-unix:rw"  -v `pwd`:/book -it book
+```
+
+Here, we have allowed docker to connect to the default camera and to use the X-11 server of the host machine to run graphical applications. In case if you use the GPU version of the images, you also have to pass `--runtime nvidia`.
+
+### Run an App
+In the container, locate a desired chapter:
+```
+cd /book/chapterX
+```
+and run a desired script of the chapter:
+```
+python chapterX.py
+```
+
+
+
+### Troubleshooting
+
+#### Could not connect to any X display.
+
+The X Server should allow connections from a docker container.
+
+Run `xhost +local:docker`, also check [this](https://forums.docker.com/t/start-a-gui-application-as-root-in-a-ubuntu-container/17069)
+
+
+## The Following Packages Were Used in the Chapters of the Book
 * OpenCV 4.2 or later: Recent 32-bit and 64-bit versions as well as installation instructions are available at
 http://opencv.org/downloads.html. Platform-specific installation instructions can be found at
 http://docs.opencv.org/doc/tutorials/introduction/table_of_content_introduction/table_of_content_introduction.html.
@@ -116,10 +169,6 @@ In addition, some chapters require the following free Python modules:
 Furthermore, the use of iPython (http://ipython.org/install.html) is highly recommended as it provides a flexible,
 interactive console interface.
 
-For full list of requirements for the entire book refer to the requirements.txt file found in this repository. Which can be installed via pip using
-```
-pip install -r requirements.txt
-```
 
 ## License
 The software is released under the GNU General Public License (GPL), which is the most commonly used free software
