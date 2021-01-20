@@ -1,8 +1,3 @@
-## $5 Tech Unlocked 2021!
-[Buy and download this Book for only $5 on PacktPub.com](https://www.packtpub.com/product/opencv-4-with-python-blueprints-second-edition/9781789801811)
------
-*If you have read this book, please leave a review on [Amazon.com](https://www.amazon.com/gp/product/1789801818).     Potential readers can then use your unbiased opinion to help them make purchase decisions. Thank you. The $5 campaign         runs from __December 15th 2020__ to __January 13th 2021.__*
-
 # OpenCV-4-with-Python-Blueprints-Second-Edition
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.154060.svg)](https://doi.org/10.5281/zenodo.154060)
