@@ -176,3 +176,7 @@ license according to Wikipedia. GPL allows for commercial use, distribution, mod
 
 The GPL is a copyleft license, which means that derived works can only be distributed under the same license terms.
 For more information, please see the license file.
+### Download a free PDF
+
+ <i>If you have already purchased a print or Kindle version of this book, you can get a DRM-free PDF version at no cost.<br>Simply click on the link to claim your free PDF.</i>
+<p align="center"> <a href="https://packt.link/free-ebook/9781789801811">https://packt.link/free-ebook/9781789801811 </a> </p>
